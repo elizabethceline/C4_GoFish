@@ -8,14 +8,21 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject var matchManager = MatchManager()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        ZStack {
+            if matchManager.gameState == .menu {
+                MenuView(matchManager: matchManager)
+            } else if matchManager.gameState == .inGame {
+                GameView(matchManager: matchManager)
+            } else {
+
+            }
         }
-        .padding()
+        .onAppear {
+            matchManager.authenticateUser()
+        }
     }
 }
 
