@@ -19,7 +19,7 @@ struct OpponentView: View {
                     .frame(width: 50, height: 50)
                     .background(Color.gray.opacity(0.5))
                     .clipShape(Circle())
-                
+
                 if isCurrentTurn {
                     Circle()
                         .fill(Color.green)
@@ -34,4 +34,21 @@ struct OpponentView: View {
                 .font(.caption2)
         }
     }
+}
+
+#Preview {
+    OpponentView(
+        player: Player(
+            id: "1", displayName: "Alice",
+            hand: [
+                Card(rank: .ace, suit: .spades),
+                Card(rank: .king, suit: .hearts),
+                Card(rank: .seven, suit: .spades),
+                Card(rank: .two, suit: .diamonds),
+                Card(rank: .jack, suit: .clubs),
+                Card(rank: .five, suit: .hearts),
+            ], books: 2), isCurrentTurn: true
+    )
+    .padding()
+
 }

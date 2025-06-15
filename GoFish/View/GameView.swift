@@ -67,6 +67,7 @@ struct GameView: View {
                         .bold()
                         .multilineTextAlignment(.center)
                         .padding()
+                        .padding(.top, 10)
 
                     Spacer()
                 }
@@ -172,13 +173,13 @@ struct GameView: View {
 
         let localPlayerId = GKLocalPlayer.local.gamePlayerID
         let player1 = Player(
-            id: localPlayerId, displayName: "Anda",
+            id: localPlayerId, displayName: "You",
             hand: [
                 Card(rank: .ace, suit: .spades),
-                Card(rank: .king, suit: .hearts),
+                Card(rank: .ace, suit: .hearts),
                 Card(rank: .seven, suit: .spades),
-                Card(rank: .two, suit: .diamonds),
-                Card(rank: .jack, suit: .clubs),
+                Card(rank: .ace, suit: .diamonds),
+                Card(rank: .ace, suit: .clubs),
                 Card(rank: .five, suit: .hearts),
             ], books: 1)
 

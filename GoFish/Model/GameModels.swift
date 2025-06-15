@@ -16,14 +16,18 @@ enum GameState {
 
 // encode to JSON, will be sent to other players
 struct GameData: Codable {
-    // bagi kartu awal
-    let initialDeal: [String: [Card]]?
-    let cardsRemaining: Int?
+    let players: [Player]?
+    let cardsRemainingInDeck: Int?
+    let isGameOver: Bool?
+    let winners: [Player]?
 
-    init(initialDeal: [String: [Card]]? = nil, cardsRemaining: Int? = nil) {
-        self.initialDeal = initialDeal
-        self.cardsRemaining = cardsRemaining
+    init(
+        players: [Player]? = nil, cardsRemainingInDeck: Int? = nil,
+        isGameOver: Bool? = nil, winners: [Player]? = nil
+    ) {
+        self.players = players
+        self.cardsRemainingInDeck = cardsRemainingInDeck
+        self.isGameOver = isGameOver
+        self.winners = winners
     }
-
-    // update game state yang lain nanti
 }

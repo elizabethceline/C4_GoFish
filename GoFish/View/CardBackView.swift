@@ -27,3 +27,8 @@ struct CardBackView: View {
         }
     }
 }
+
+#Preview {
+    CardBackView()
+        .frame(width: 80, height: 110)
+}

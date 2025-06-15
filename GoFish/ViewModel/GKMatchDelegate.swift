@@ -16,38 +16,32 @@ extension MatchManager: GKMatchDelegate {
             let decodedData = try JSONDecoder().decode(
                 GameData.self, from: data)
 
-            // bagi kartu awal
-            if let initialDeal = decodedData.initialDeal {
-                var allPlayersInfo = [Player]()
-
-                for (playerID, hand) in initialDeal {
-                    let displayName: String
-                    if playerID == localPlayer.gamePlayerID {
-                        displayName = localPlayer.displayName
-                    } else {
-                        displayName =
-                            self.otherPlayers.first(where: {
-                                $0.gamePlayerID == playerID
-                            })?.displayName ?? "Unknown Player"
-                    }
-                    allPlayersInfo.append(
-                        Player(
-                            id: playerID, displayName: displayName, hand: hand,
-                            books: 0))
-                }
-
+            // update players and game state
+            if let receivedPlayers = decodedData.players {
                 DispatchQueue.main.async {
-                    self.players = allPlayersInfo.sorted(by: {
-                        $0.displayName < $1.displayName
-                    })
+                    self.players = receivedPlayers
                     self.gameState = .inGame
-                    self.gameLog.append("Received cards from host.")
                 }
             }
 
-            if let remainingCount = decodedData.cardsRemaining {
+            // update cards remaining in deck
+            if let remainingCount = decodedData.cardsRemainingInDeck {
                 DispatchQueue.main.async {
                     self.cardsRemainingInDeck = remainingCount
+                }
+            }
+
+            // check game over
+            if decodedData.isGameOver == true {
+                DispatchQueue.main.async {
+                    self.gameState = .gameOver
+                }
+            }
+
+            // check winners
+            if let receivedWinners = decodedData.winners {
+                DispatchQueue.main.async {
+                    self.winners = receivedWinners
                 }
             }
 
@@ -55,7 +49,6 @@ extension MatchManager: GKMatchDelegate {
             print("Error decoding data: \(error.localizedDescription)")
         }
     }
-
     func match(
         _ match: GKMatch, player: GKPlayer,
         didChange state: GKPlayerConnectionState

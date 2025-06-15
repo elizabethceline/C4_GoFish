@@ -19,6 +19,7 @@ class MatchManager: NSObject, ObservableObject {
     @Published var gameLog: [String] = ["Welcome to Go Fish!"]
     @Published var currentPlayerId: String?
     @Published var cardsRemainingInDeck: Int = 52
+    @Published var winners: [Player] = []
 
     var deck = Deck()
 
@@ -94,46 +95,104 @@ class MatchManager: NSObject, ObservableObject {
         deck.shuffle()
 
         var allPlayersInfo = [Player]()
-        var dealData = [String: [Card]]()
-
         let initialHandSize = 5
 
-        // local player's card
-        let localPlayerHand = deck.deal(count: initialHandSize)
-        allPlayersInfo.append(
-            Player(
-                id: localPlayer.gamePlayerID,
-                displayName: localPlayer.displayName, hand: localPlayerHand,
-                books: 0))
-        dealData[localPlayer.gamePlayerID] = localPlayerHand
-
-        // other player's card
-        for p in otherPlayers {
+        let allPlayers = [localPlayer] + otherPlayers
+        for p in allPlayers {
             let playerHand = deck.deal(count: initialHandSize)
             allPlayersInfo.append(
                 Player(
                     id: p.gamePlayerID, displayName: p.displayName,
                     hand: playerHand, books: 0))
-            dealData[p.gamePlayerID] = playerHand
+        }
+
+        self.players = allPlayersInfo
+
+        for player in self.players {
+            checkForBooks(forPlayerId: player.id)
         }
 
         let remainingCount = self.deck.cardsRemaining
-
-        // send data bagi kartu ke all player
         let gameData = GameData(
-            initialDeal: dealData, cardsRemaining: remainingCount)
+            players: self.players, cardsRemainingInDeck: remainingCount)
         sendData(gameData)
 
-        // update local game state
         DispatchQueue.main.async {
-            self.players = allPlayersInfo.sorted(by: {
-                $0.displayName < $1.displayName
-            })
-            self.currentPlayerId = self.players.first?.id
             self.cardsRemainingInDeck = remainingCount
             self.gameState = .inGame
-            self.gameLog.append("Cards have been dealt.")
+            self.currentPlayerId = self.players.first?.id
+            if !self.gameLog.contains(where: { $0.contains("made a book") }) {
+                self.gameLog.append("Cards have been dealt.")
+            }
         }
+    }
+
+    func checkForBooks(forPlayerId: String) {
+        guard
+            let playerIndex = players.firstIndex(where: { $0.id == forPlayerId }
+            )
+        else { return }
+
+        let groupedByRank = Dictionary(
+            grouping: players[playerIndex].hand, by: { $0.rank })
+
+        for (rank, cards) in groupedByRank {
+            if cards.count == 4 {
+                players[playerIndex].books += 1
+
+                players[playerIndex].hand.removeAll { $0.rank == rank }
+
+                let playerName = players[playerIndex].displayName
+                let logMessage =
+                    "🎉 \(playerName) made a book of \(rank.rawValue)!"
+                gameLog.append(logMessage)
+                print(logMessage)
+            }
+        }
+    }
+
+    @discardableResult
+    func checkGameOver() -> Bool {
+        if players.contains(where: { $0.hand.isEmpty }) {
+            endGame()
+            return true
+        }
+
+        if cardsRemainingInDeck <= 0 {
+            endGame()
+            return true
+        }
+
+        return false
+    }
+
+    func determineWinner() {
+        guard let maxBooks = players.map({ $0.books }).max() else {
+            return
+        }
+
+        let allWinners = players.filter { $0.books == maxBooks }
+
+        self.winners = allWinners
+
+        if allWinners.count == 1, let winner = allWinners.first {
+            gameLog.append("🏆 \(winner.displayName) wins the game!")
+        } else {
+            let winnerNames = allWinners.map { $0.displayName }.joined(
+                separator: ", ")
+            gameLog.append("🏆 It's a tie between: \(winnerNames)!")
+        }
+    }
+
+    func endGame() {
+        guard gameState != .gameOver else { return }
+
+        gameState = .gameOver
+        determineWinner()
+
+        let gameOverData = GameData(
+            players: self.players, isGameOver: true, winners: self.winners)
+        sendData(gameOverData)
     }
 
     func resetGame() {
