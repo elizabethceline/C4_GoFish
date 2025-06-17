@@ -70,7 +70,19 @@ struct CardView: View {
                                      Image(systemName: card.suit.symbolName)
                                  }
                                  .padding(6)
+                  //tambahan
               }
+                         .overlay(alignment: .bottomTrailing) { // New overlay for bottom right
+                             VStack(spacing: 2) {
+                                 Image(systemName: card.suit.symbolName)
+                                 
+                                 Text(card.rank.rawValue)
+                                     .font(.headline)
+                                     .foregroundColor(cardColor)
+                             }
+                             .padding(6)
+                             .rotationEffect(.degrees(180)) // Rotate by 180 degrees
+                         }
               .foregroundColor(cardColor)
       }
   }

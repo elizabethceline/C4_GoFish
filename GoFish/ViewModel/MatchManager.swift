@@ -89,7 +89,7 @@ class MatchManager: NSObject, ObservableObject {
             print("I am a client. Waiting for host to deal.")
         }
     }
-
+// ini animasi
     private func dealInitialCards() {
         deck.createFullDeck()
         deck.shuffle()
