@@ -89,8 +89,6 @@ class MatchManager: NSObject, ObservableObject {
             print("I am a client. Waiting for host to deal.")
         }
     }
-    
-    
 
     private func dealInitialCards() {
         deck.createFullDeck()
