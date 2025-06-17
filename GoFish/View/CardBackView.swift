@@ -11,24 +11,21 @@ struct CardBackView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.blue.opacity(0.8), Color.blue.opacity(0.5)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                .stroke(Color.gray, lineWidth: 1)
+                .background(
+                    Image("cardbackview")
+                        .resizable()
+                        .scaledToFill()
                 )
-                .shadow(color: .black.opacity(0.3), radius: 3, x: 2, y: 2)
-            
-            Image(systemName: "staroflife.fill")
-                .foregroundColor(.white.opacity(0.8))
-                .font(.system(size: 40))
-                .shadow(radius: 2)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .aspectRatio(2.5 / 3.5, contentMode: .fit)
+                .overlay(alignment: .topLeading) {
+                }
         }
     }
 }
 
 #Preview {
     CardBackView()
-        .frame(width: 80, height: 110)
+        .padding()
 }

@@ -12,32 +12,68 @@ struct CardView: View {
     
     private var cardColor: Color {
         switch card.suit {
+        //gantiwarna
         case .hearts, .diamonds:
-            return .red
+            return .newRed
         case .clubs, .spades:
             return .black
         }
     }
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 10)
-            .fill(Color.white)
-            .stroke(Color.gray, lineWidth: 1)
-            .aspectRatio(2.5 / 3.5, contentMode: .fit)
-            .overlay(alignment: .topLeading) {
-                VStack(spacing: 2) {
-                    Text(card.rank.rawValue)
-                        .font(.headline)
-                        .foregroundColor(cardColor)
-                    
-                    Image(systemName: card.suit.symbolName)
-                }
-                .padding(8)
-            }
-            .foregroundColor(cardColor)
-    }
-}
-
+//gantiviewamel
+    private var cardBackgroundName: String {
+          switch card.rank {
+          case .ace:
+              return "cardimageace" // Nama file gambar untuk As
+          case .two:
+              return "cardimage2"
+          case .three:
+              return "cardimage3"
+          case .four:
+              return "cardimage4"
+          case .five:
+              return "cardimage5"
+          case .six:
+              return "cardimage6"
+          case .seven:
+              return "cardimage7"
+          case .eight:
+              return "cardimage8"
+          case .nine:
+              return "cardimage9"
+          case .ten:
+              return "cardimage10"
+          case .jack:
+              return "cardimagejack"
+          case .queen:
+              return "cardimagequeen"
+          case .king:
+              return "cardimageking"
+          }
+      }
+      //gantibackground
+      var body: some View {
+          RoundedRectangle(cornerRadius: 10)
+              .stroke(Color.gray, lineWidth: 1)
+              .background(
+                  Image(cardBackgroundName)
+                      .resizable()
+                      .scaledToFill()
+              )
+              .clipShape(RoundedRectangle(cornerRadius: 10))
+              .aspectRatio(2.5 / 3.5, contentMode: .fit)
+              .overlay(alignment: .topLeading) {
+                  VStack(spacing: 2) {
+                                     Text(card.rank.rawValue)
+                                         .font(.headline)
+                                         .foregroundColor(cardColor)
+                                     
+                                     Image(systemName: card.suit.symbolName)
+                                 }
+                                 .padding(6)
+              }
+              .foregroundColor(cardColor)
+      }
+  }
 #Preview {
     HStack {
         CardView(card: Card(rank: .king, suit: .hearts))

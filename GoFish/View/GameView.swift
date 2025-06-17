@@ -37,8 +37,10 @@ struct GameView: View {
 
     var body: some View {
         ZStack {
-            // background
-            Color.blue.opacity(0.2)
+            // background amel
+            Image("gameviewbackground")
+                .resizable()
+                .scaledToFill()
                 .ignoresSafeArea()
 
             VStack {
@@ -111,7 +113,8 @@ struct GameView: View {
             if let hand = localPlayer?.hand.sorted(by: { $0.rank < $1.rank }) {
                 ZStack {
                     ForEach(Array(hand.enumerated()), id: \.element.id) {
-                        index, card in
+                        index,
+                        card in
                         CardView(card: card)
                             .frame(height: 140)
                             .offset(
@@ -173,7 +176,8 @@ struct GameView: View {
 
         let localPlayerId = GKLocalPlayer.local.gamePlayerID
         let player1 = Player(
-            id: localPlayerId, displayName: "You",
+            id: localPlayerId,
+            displayName: "You",
             hand: [
                 Card(rank: .ace, suit: .spades),
                 Card(rank: .ace, suit: .hearts),
@@ -181,7 +185,9 @@ struct GameView: View {
                 Card(rank: .ace, suit: .diamonds),
                 Card(rank: .ace, suit: .clubs),
                 Card(rank: .five, suit: .hearts),
-            ], books: 1)
+            ],
+            books: 1
+        )
 
         let opponentHand1 = (0..<5).map { _ in Card(rank: .queen, suit: .clubs)
         }
@@ -189,11 +195,17 @@ struct GameView: View {
         }
 
         let player2 = Player(
-            id: "OPPONENT_1", displayName: "Player A", hand: opponentHand1,
-            books: 2)
+            id: "OPPONENT_1",
+            displayName: "Player A",
+            hand: opponentHand1,
+            books: 2
+        )
         let player3 = Player(
-            id: "OPPONENT_2", displayName: "Player B", hand: opponentHand2,
-            books: 0)
+            id: "OPPONENT_2",
+            displayName: "Player B",
+            hand: opponentHand2,
+            books: 0
+        )
 
         manager.players = [player1, player2, player3]
         manager.gameState = .inGame
