@@ -13,6 +13,8 @@ struct GameView: View {
 
     @State private var selectedCardIndex: Int?
 
+    @State private var dealAnimationTrigger = false
+
     private var localPlayer: Player? {
         matchManager.players.first { $0.id == GKLocalPlayer.local.gamePlayerID }
     }
@@ -36,51 +38,111 @@ struct GameView: View {
     }
 
     var body: some View {
-        ZStack {
-            // background amel
-            Image("gameviewbackground")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-
-            VStack {
-                HStack(alignment: .top) {
-                    playerSideView(for: opponent1)
-                    Spacer()
-                    playerSideView(for: opponent2)
-                }
+        GeometryReader { geo in
+            ZStack {
+                // background amel
+                Image("gameviewbackground")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
 
                 VStack {
-                    Spacer()
-                    CardBackView()
-                        .frame(width: 80, height: 110)
-                        .overlay(alignment: .bottom) {
-                            Text("\(matchManager.cardsRemainingInDeck)")
-                                .font(.caption.bold())
-                                .foregroundColor(.white)
-                                .padding(4)
-                                .background(Color.black.opacity(0.5))
-                                .clipShape(Capsule())
-                                .offset(y: 15)
-                        }
+                    HStack(alignment: .top) {
+                        playerSideView(for: opponent1)
+                        Spacer()
+                        playerSideView(for: opponent2)
+                    }
 
-                    Text(matchManager.gameLog.last ?? "Game has started!")
-                        .font(.headline)
-                        .bold()
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .padding(.top, 10)
+                    VStack {
+                        Spacer()
+                        CardBackView()
+                            .frame(width: 80, height: 110)
+                            .overlay(alignment: .bottom) {
+                                Text("\(matchManager.cardsRemainingInDeck)")
+                                    .font(.caption.bold())
+                                    .foregroundColor(.white)
+                                    .padding(4)
+                                    .background(Color.black.opacity(0.5))
+                                    .clipShape(Capsule())
+                                    .offset(y: 15)
+                            }
+
+                        Text(matchManager.gameLog.last ?? "Game has started!")
+                            .font(.headline)
+                            .bold()
+                            .multilineTextAlignment(.center)
+                            .padding()
+                            .padding(.top, 10)
+
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
 
                     Spacer()
+
+                    localPlayerView()
                 }
-                .frame(maxWidth: .infinity)
+                .padding()
 
-                Spacer()
-
-                localPlayerView()
+                ForEach(
+                    Array(matchManager.cardsBeingDealt.enumerated()),
+                    id: \.offset
+                ) { index, dealInfo in
+                    CardView(card: dealInfo.card)
+                        .frame(width: 80, height: 110)
+                        // Posisi awal kartu adalah di tengah (posisi dek)
+                        // Posisi akhir ditentukan oleh fungsi `position`
+                        .position(
+                            dealAnimationTrigger
+                                ? position(
+                                    for: dealInfo.playerID,
+                                    in: geo.frame(in: .local)
+                                )
+                                : position(
+                                    for: "DECK",
+                                    in: geo.frame(in: .local)
+                                )
+                        )
+                        // Efek kartu berputar saat dibagikan
+                        .rotation3DEffect(
+                            .degrees(dealAnimationTrigger ? 0 : 180),
+                            axis: (x: 0, y: 1, z: 0)
+                        )
+                        // Animasi dipicu dengan delay berurutan
+                        .animation(
+                            .easeInOut(duration: 0.6)
+                                .delay(Double(index) * 0.15),
+                            value: dealAnimationTrigger
+                        )
+                }
+                .onAppear {
+                    dealAnimationTrigger = true
+                }
             }
-            .padding()
         }
+    }
+
+    // Helper function untuk menentukan posisi tujuan kartu
+    private func position(for playerID: String, in frame: CGRect) -> CGPoint {
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+
+        if playerID == "DECK" {
+            return center
+        }
+
+        if playerID == localPlayer?.id {
+            // Posisi tangan pemain lokal (bawah)
+            return CGPoint(x: frame.midX, y: frame.maxY - 120)
+        } else if playerID == opponent1?.id {
+            // Posisi lawan 1 (kiri atas)
+            return CGPoint(x: frame.minX + 60, y: frame.minY + 150)
+        } else if playerID == opponent2?.id {
+            // Posisi lawan 2 (kanan atas)
+            return CGPoint(x: frame.maxX - 60, y: frame.minY + 150)
+        }
+
+        // Default kembali ke tengah jika ID tidak ditemukan
+        return center
     }
 
     @ViewBuilder
@@ -93,11 +155,13 @@ struct GameView: View {
                 )
 
                 ZStack {
-                    ForEach(0..<min(player.hand.count, 7), id: \.self) {
-                        index in
-                        CardBackView()
-                            .frame(width: 60, height: 85)
-                            .offset(y: CGFloat(index) * 15)
+                    if matchManager.cardsBeingDealt.isEmpty {
+                        ForEach(0..<min(player.hand.count, 7), id: \.self) {
+                            index in
+                            CardBackView()
+                                .frame(width: 60, height: 85)
+                                .offset(y: CGFloat(index) * 15)
+                        }
                     }
                 }
             }
@@ -110,7 +174,9 @@ struct GameView: View {
     @ViewBuilder
     private func localPlayerView() -> some View {
         VStack(spacing: 10) {
-            if let hand = localPlayer?.hand.sorted(by: { $0.rank < $1.rank }) {
+            if let hand = localPlayer?.hand.sorted(by: { $0.rank < $1.rank }),
+                matchManager.cardsBeingDealt.isEmpty
+            {
                 ZStack {
                     ForEach(Array(hand.enumerated()), id: \.element.id) {
                         index,
@@ -131,6 +197,8 @@ struct GameView: View {
                     }
                 }
                 .frame(height: 160)
+            } else {
+                Spacer().frame(height: 160)
             }
 
             HStack(spacing: 15) {
