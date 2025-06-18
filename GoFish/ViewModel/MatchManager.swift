@@ -59,7 +59,7 @@ class MatchManager: NSObject, ObservableObject {
         let request = GKMatchRequest()
         request.minPlayers = 3
         request.maxPlayers = 3
-        request.inviteMessage = "Would you like to play Go Fish?"
+        request.inviteMessage = "Would you like to play SKETCHY?"
 
         guard
             let matchmakingVC = GKMatchmakerViewController(
@@ -97,15 +97,24 @@ class MatchManager: NSObject, ObservableObject {
            deck.createFullDeck()
            deck.shuffle()
 
-           var tempPlayers = [Player]()
-           let allGKPlayers = [localPlayer] + otherPlayers
-           for p in allGKPlayers {
-               tempPlayers.append(
-                   Player(
-                       id: p.gamePlayerID, displayName: p.displayName,
-                       hand: [], books: 0))
-           }
-           self.players = tempPlayers
+        var initialPlayers = [Player]()
+                let allGKPlayers = [localPlayer] + otherPlayers
+                for p in allGKPlayers {
+                    initialPlayers.append(
+                        Player(
+                            id: p.gamePlayerID, displayName: p.displayName,
+                            hand: [], books: 0))
+                }
+                // Update self.players di sini agar UI bisa menampilkan nama-nama pemain
+                // selama animasi berlangsung.
+                DispatchQueue.main.async {
+                    self.players = initialPlayers
+                }
+
+                // Variabel LOKAL untuk menyimpan tangan kartu, TIDAK di-publish.
+                var tempPlayerHands = [String: [Card]]()
+                allGKPlayers.forEach { tempPlayerHands[$0.gamePlayerID] = [] }
+                
 
            let initialHandSize = 5
            let totalCardsToDeal = allGKPlayers.count * initialHandSize
@@ -117,47 +126,57 @@ class MatchManager: NSObject, ObservableObject {
                    return
                }
 
-               let playerIndex = dealtCardsCount % allGKPlayers.count
-               let receivingPlayer = self.players[playerIndex]
+            let playerIndex = dealtCardsCount % allGKPlayers.count
+            let receivingPlayerID = allGKPlayers[playerIndex].gamePlayerID
+                          
+                          // 1. Tambahkan kartu ke data tangan SEMENTARA.
+                          tempPlayerHands[receivingPlayerID]?.append(card)
 
-               DispatchQueue.main.async {
-                   self.cardsBeingDealt.append((card: card, playerID: receivingPlayer.id))
-               }
+                          // 2. Tambahkan kartu ke properti animasi. Ini akan memicu UI update.
+                          DispatchQueue.main.async {
+                              self.cardsBeingDealt.append((card: card, playerID: receivingPlayerID))
+                          }
 
-               self.players[playerIndex].hand.append(card)
-
-               dealtCardsCount += 1
+                          dealtCardsCount += 1
 
                if dealtCardsCount == totalCardsToDeal {
                    timer.invalidate()
                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                       self.finishDealing()
+                       self.finalizeInitialDeal(finalHands: tempPlayerHands)
                    }
                }
            }
        }
        
-       private func finishDealing() {
-           self.cardsBeingDealt.removeAll()
-           
-           for player in self.players {
-               checkForBooks(forPlayerId: player.id)
-           }
+    private func finalizeInitialDeal(finalHands: [String: [Card]]) {
+            // 4. Update state permainan utama dengan data final.
+            for i in 0..<players.count {
+                let playerID = players[i].id
+                players[i].hand = finalHands[playerID] ?? []
+            }
+            
+            // 5. Kosongkan array animasi agar kartu yang terbang menghilang.
+            self.cardsBeingDealt.removeAll()
+            
+            // Sekarang, lanjutkan logika permainan seperti biasa.
+            for player in self.players {
+                checkForBooks(forPlayerId: player.id)
+            }
 
-           let remainingCount = self.deck.cardsRemaining
-           let gameData = GameData(
-               players: self.players, cardsRemainingInDeck: remainingCount)
-           sendData(gameData)
+            let remainingCount = self.deck.cardsRemaining
+            let gameData = GameData(
+                players: self.players, cardsRemainingInDeck: remainingCount)
+            sendData(gameData)
 
-           DispatchQueue.main.async {
-               self.cardsRemainingInDeck = remainingCount
-               self.gameState = .inGame
-               self.currentPlayerId = self.players.first?.id
-               if !self.gameLog.contains(where: { $0.contains("made a book") }) {
-                   self.gameLog.append("Cards have been dealt.")
-               }
-           }
-       }
+            DispatchQueue.main.async {
+                self.cardsRemainingInDeck = remainingCount
+                self.gameState = .inGame
+                self.currentPlayerId = self.players.first?.id
+                if !self.gameLog.contains(where: { $0.contains("made a book") }) {
+                    self.gameLog.append("Cards have been dealt.")
+                }
+            }
+        }
        
     func checkForBooks(forPlayerId: String) {
         guard
