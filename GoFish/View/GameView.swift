@@ -144,17 +144,18 @@ struct GameView: View {
                 Image(systemName: "person.fill")
                     .font(.title)
                     .frame(width: 60, height: 60)
-                    .background(Color.orange.opacity(0.8))
+                    .background(Color.newRed.opacity(0.8))
                     .clipShape(Circle())
+                    .foregroundColor(.white)
 
                 if isMyTurn {
                     Button("Your Turn") {
 
                     }
                     .font(.headline.bold())
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .padding()
-                    .background(Color.yellow)
+                    .background(Color.newRed)
                     .clipShape(Capsule())
                     .shadow(radius: 5)
                 } else {

@@ -21,6 +21,9 @@ class MatchManager: NSObject, ObservableObject {
     @Published var cardsRemainingInDeck: Int = 52
     @Published var winners: [Player] = []
 
+    // Properti baru untuk mengontrol animasi pembagian kartu
+        @Published var cardsBeingDealt: [(card: Card, playerID: String)] = []
+    
     var deck = Deck()
 
     var rootViewController: UIViewController? {
@@ -89,44 +92,73 @@ class MatchManager: NSObject, ObservableObject {
             print("I am a client. Waiting for host to deal.")
         }
     }
-// ini animasi
+    
     private func dealInitialCards() {
-        deck.createFullDeck()
-        deck.shuffle()
+           deck.createFullDeck()
+           deck.shuffle()
 
-        var allPlayersInfo = [Player]()
-        let initialHandSize = 5
+           var tempPlayers = [Player]()
+           let allGKPlayers = [localPlayer] + otherPlayers
+           for p in allGKPlayers {
+               tempPlayers.append(
+                   Player(
+                       id: p.gamePlayerID, displayName: p.displayName,
+                       hand: [], books: 0))
+           }
+           self.players = tempPlayers
 
-        let allPlayers = [localPlayer] + otherPlayers
-        for p in allPlayers {
-            let playerHand = deck.deal(count: initialHandSize)
-            allPlayersInfo.append(
-                Player(
-                    id: p.gamePlayerID, displayName: p.displayName,
-                    hand: playerHand, books: 0))
-        }
+           let initialHandSize = 5
+           let totalCardsToDeal = allGKPlayers.count * initialHandSize
+           var dealtCardsCount = 0
 
-        self.players = allPlayersInfo
+           Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [self] timer in
+               guard let card = self.deck.deal(count: 1).first else {
+                   timer.invalidate()
+                   return
+               }
 
-        for player in self.players {
-            checkForBooks(forPlayerId: player.id)
-        }
+               let playerIndex = dealtCardsCount % allGKPlayers.count
+               let receivingPlayer = self.players[playerIndex]
 
-        let remainingCount = self.deck.cardsRemaining
-        let gameData = GameData(
-            players: self.players, cardsRemainingInDeck: remainingCount)
-        sendData(gameData)
+               DispatchQueue.main.async {
+                   self.cardsBeingDealt.append((card: card, playerID: receivingPlayer.id))
+               }
 
-        DispatchQueue.main.async {
-            self.cardsRemainingInDeck = remainingCount
-            self.gameState = .inGame
-            self.currentPlayerId = self.players.first?.id
-            if !self.gameLog.contains(where: { $0.contains("made a book") }) {
-                self.gameLog.append("Cards have been dealt.")
-            }
-        }
-    }
+               self.players[playerIndex].hand.append(card)
 
+               dealtCardsCount += 1
+
+               if dealtCardsCount == totalCardsToDeal {
+                   timer.invalidate()
+                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                       self.finishDealing()
+                   }
+               }
+           }
+       }
+       
+       private func finishDealing() {
+           self.cardsBeingDealt.removeAll()
+           
+           for player in self.players {
+               checkForBooks(forPlayerId: player.id)
+           }
+
+           let remainingCount = self.deck.cardsRemaining
+           let gameData = GameData(
+               players: self.players, cardsRemainingInDeck: remainingCount)
+           sendData(gameData)
+
+           DispatchQueue.main.async {
+               self.cardsRemainingInDeck = remainingCount
+               self.gameState = .inGame
+               self.currentPlayerId = self.players.first?.id
+               if !self.gameLog.contains(where: { $0.contains("made a book") }) {
+                   self.gameLog.append("Cards have been dealt.")
+               }
+           }
+       }
+       
     func checkForBooks(forPlayerId: String) {
         guard
             let playerIndex = players.firstIndex(where: { $0.id == forPlayerId }

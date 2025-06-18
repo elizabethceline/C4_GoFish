@@ -15,66 +15,77 @@ struct GameOverView: View {
         VStack(spacing: 15) {
             Spacer()
 
-            Text("Game Over!")
-                .font(.largeTitle.bold())
-                .foregroundColor(.yellow)
-                .padding(.bottom, 20)
-
-            VStack(spacing: 12) {
-                ForEach(matchManager.players.sorted { $0.books > $1.books }) {
-                    player in
-
-                    let isWinner = matchManager.winners.contains(player)
-
-                    HStack(spacing: 15) {
-                        Text(player.displayName)
-                            .font(isWinner ? .title2.bold() : .title3)
-
-                        if isWinner {
-                            Image(systemName: "trophy.fill")
-                                .foregroundColor(.yellow)
-                                .font(.title2)
+           // Text("Game Over!")
+             //   .font(.largeTitle.bold())
+             //   .foregroundColor(.yellow)
+             //   .padding(.bottom, 20)
+            
+            ZStack {
+                    Image("gameoverbackground")
+                        .resizable()
+                        .frame(width: 450, height: 600)
+                        .aspectRatio(contentMode: .fit)
+                        .edgesIgnoringSafeArea(.all)
+                
+                
+                VStack(spacing: 15) {
+                    ForEach(matchManager.players.sorted { $0.books > $1.books }) {
+                        player in
+                        
+                        let isWinner = matchManager.winners.contains(player)
+                        
+                       
+                        HStack(spacing: 15) {
+                            Text(player.displayName)
+                                .font(isWinner ? .system(size: 20).bold() : .system(size: 20))
+                            
+                            
+                            if isWinner {
+                                Image(systemName: "trophy.fill")
+                                    .foregroundColor(.yellow)
+                                    .font(.title2)
+                            }
+                            
+                            Spacer()
+                            
+                            Text("Books: \(player.books)")
+                                .font(isWinner ? .system(size: 20).bold() : .system(size: 20))
                         }
-
-                        Spacer()
-
-                        Text("Books: \(player.books)")
-                            .font(isWinner ? .title2.bold() : .title3)
-                    }
-                    .padding()
-                    .background(
-                        isWinner
+                        .padding()
+                        .background(
+                            isWinner
                             ? Color.yellow.opacity(0.2)
                             : Color.black.opacity(0.3)
-                    )
-                    .cornerRadius(15)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 15)
-                            .stroke(
-                                isWinner ? Color.yellow : Color.clear,
-                                lineWidth: 3)
-                    )
-                    .shadow(
-                        color: isWinner ? .yellow.opacity(0.5) : .clear,
-                        radius: 10
-                    )
-                    .scaleEffect(isWinner ? 1.05 : 1.0)
+                        )
+                        .cornerRadius(15)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15)
+                                .stroke(
+                                    isWinner ? Color.yellow : Color.clear,
+                                    lineWidth: 3)
+                        )
+                        .shadow(
+                            color: isWinner ? .yellow.opacity(0.5) : .clear,
+                            radius: 10
+                        )
+                        .scaleEffect(isWinner ? 1.05 : 1.0)
+                    }
                 }
+                
+                .frame(width: 270, height: 70)
             }
             .padding(.horizontal)
 
             Spacer()
-
+//gantiimage
             Button {
                 matchManager.resetGame()
             } label: {
-                Text("Back to Menu")
-                    .font(.title2.bold())
-                    .padding(.horizontal, 60)
-                    .padding(.vertical, 15)
-                    .background(Color.blue)
-                    .clipShape(Capsule())
-            }
+                Image("backtomenubutton")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 250, height: 70)
+                }
 
             Spacer()
         }
