@@ -21,6 +21,10 @@ extension MatchManager: GKMatchDelegate {
                 self.currentPlayerId = decodedData.currentPlayerId ?? self.currentPlayerId
                 self.gameLog = decodedData.gameLog ?? self.gameLog
 
+                if let syncedDeck = decodedData.shuffledDeck {
+                    self.deck = Deck(from: syncedDeck)
+                }
+
                 if decodedData.isGameOver ?? false {
                     self.gameState = .gameOver
                     self.winners = decodedData.winners ?? []

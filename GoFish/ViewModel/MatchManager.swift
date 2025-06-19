@@ -24,6 +24,7 @@ class MatchManager: NSObject, ObservableObject {
     var deck = Deck()
     // Store the original dealt deck for memory tracking
     private var dealtCards = [Card]()
+    private var usedCards = [Card]()
 
     var rootViewController: UIViewController? {
         let windowScene =
@@ -84,6 +85,12 @@ class MatchManager: NSObject, ObservableObject {
             ]
         let hostID = allPlayerIDs.sorted().first
 
+        if localPlayer.gamePlayerID != hostID {
+            self.deck = Deck(from: []) // Empty deck for clients
+            print("I am a client. Waiting for host to deal.")
+            return
+        }
+
         if localPlayer.gamePlayerID == hostID {
             print("I am the host. Dealing cards...")
             dealInitialCards()
@@ -93,7 +100,7 @@ class MatchManager: NSObject, ObservableObject {
     }
 
     private func dealInitialCards() {
-        deck.createFullDeck()
+        deck = Deck()
         deck.shuffle()
 
         var allPlayersInfo = [Player]()
@@ -105,12 +112,13 @@ class MatchManager: NSObject, ObservableObject {
             allPlayersInfo.append(
                 Player(
                     id: p.gamePlayerID, displayName: p.displayName,
-                    hand: playerHand, bookRanks: [], books: 0))
+                    hand: playerHand, books: 0))
         }
 
         self.players = allPlayersInfo
         // Remember all dealt cards for memory tracking
         self.dealtCards = allPlayersInfo.flatMap { $0.hand }
+        self.usedCards = self.dealtCards
 
         for player in self.players {
             checkForBooks(forPlayerId: player.id)
@@ -123,7 +131,8 @@ class MatchManager: NSObject, ObservableObject {
             isGameOver: false,
             winners: nil,
             currentPlayerId: self.players.first?.id,
-            gameLog: self.gameLog
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
         )
         sendData(gameData)
 
@@ -154,6 +163,7 @@ class MatchManager: NSObject, ObservableObject {
             if cards.count == 4 {
                 players[playerIndex].books += 1
                 players[playerIndex].hand.removeAll { $0.rank == rank }
+                usedCards.removeAll { $0.rank == rank }
                 players[playerIndex].bookRanks.append(rank)
                 let playerName = players[playerIndex].displayName
                 let logMessage =
@@ -212,8 +222,10 @@ class MatchManager: NSObject, ObservableObject {
             // Go Fish
             if let drawnCard = deck.deal(count: 1).first {
                 players[askerIndex].hand.append(drawnCard)
+                usedCards.append(drawnCard)
                 gameLog.append("\(players[askerIndex].displayName) goes fish and draws a card.")
                 print("\(players[askerIndex].displayName) drew a card.")
+                cardsRemainingInDeck = deck.cardsRemaining
 
                 // Check for book from drawn card
                 checkForBooks(forPlayerId: askingPlayerId)
@@ -229,7 +241,9 @@ class MatchManager: NSObject, ObservableObject {
             isGameOver: false,
             winners: nil,
             currentPlayerId: self.currentPlayerId,
-            gameLog: self.gameLog
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
+            
         )
         sendData(gameData)
 
@@ -249,7 +263,8 @@ class MatchManager: NSObject, ObservableObject {
             isGameOver: false,
             winners: nil,
             currentPlayerId: self.currentPlayerId,
-            gameLog: self.gameLog
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
         )
         sendData(gameData)
     }
@@ -284,7 +299,8 @@ class MatchManager: NSObject, ObservableObject {
             isGameOver: true,
             winners: self.winners,
             currentPlayerId: self.currentPlayerId,
-            gameLog: self.gameLog
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
         )
         sendData(gameOverData)
     }

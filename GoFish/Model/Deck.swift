@@ -7,14 +7,19 @@
 
 import Foundation
 
-struct Deck {
+@Observable
+class  Deck {
     private var cards: [Card] = []
 
     init() {
         self.createFullDeck()
     }
+    
+    init(from cards: [Card]) {
+        self.cards = cards
+    }
 
-    mutating func createFullDeck() {
+    func createFullDeck() {
         cards = []
         for suit in Card.Suit.allCases {
             for rank in Card.Rank.allCases {
@@ -23,11 +28,11 @@ struct Deck {
         }
     }
 
-    mutating func shuffle() {
+    func shuffle() {
         cards.shuffle()
     }
 
-    mutating func deal(count: Int) -> [Card] {
+    func deal(count: Int) -> [Card] {
         let countToDeal = min(count, cards.count)
         let dealtCards = Array(cards.prefix(countToDeal))
         cards.removeFirst(countToDeal)
@@ -44,5 +49,9 @@ struct Deck {
 
     var topCardDescription: String? {
         cards.first.map { "\($0.rank.rawValue) of \($0.suit.rawValue)" }
+    }
+
+    func getCards() -> [Card] {
+        return cards
     }
 }

@@ -7,8 +7,10 @@
 
 import Foundation
 import GameKit
+import SwiftUI
 
-struct Player: Identifiable, Codable, Hashable {
+@Observable
+class Player: Identifiable, Codable, Hashable {
     let id: String
     let displayName: String
     var hand: [Card]
@@ -21,6 +23,14 @@ struct Player: Identifiable, Codable, Hashable {
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+    }
+    
+    init(id: String, displayName: String, hand: [Card], books: Int) {
+        self.id = id
+        self.displayName = displayName
+        self.hand = hand
+//        self.bookRanks = bookRanks
+        self.books = books
     }
 }
 
