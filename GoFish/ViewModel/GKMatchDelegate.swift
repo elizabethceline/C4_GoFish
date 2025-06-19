@@ -13,35 +13,23 @@ extension MatchManager: GKMatchDelegate {
         fromRemotePlayer player: GKPlayer
     ) {
         do {
-            let decodedData = try JSONDecoder().decode(
-                GameData.self, from: data)
+            let decodedData = try JSONDecoder().decode(GameData.self, from: data)
 
-            // update players and game state
-            if let receivedPlayers = decodedData.players {
-                DispatchQueue.main.async {
-                    self.players = receivedPlayers
-                    self.gameState = .inGame
+            DispatchQueue.main.async {
+                self.players = decodedData.players ?? self.players
+                self.cardsRemainingInDeck = decodedData.cardsRemainingInDeck ?? self.cardsRemainingInDeck
+                self.currentPlayerId = decodedData.currentPlayerId ?? self.currentPlayerId
+                self.gameLog = decodedData.gameLog ?? self.gameLog
+
+                if let syncedDeck = decodedData.shuffledDeck {
+                    self.deck = Deck(from: syncedDeck)
                 }
-            }
 
-            // update cards remaining in deck
-            if let remainingCount = decodedData.cardsRemainingInDeck {
-                DispatchQueue.main.async {
-                    self.cardsRemainingInDeck = remainingCount
-                }
-            }
-
-            // check game over
-            if decodedData.isGameOver == true {
-                DispatchQueue.main.async {
+                if decodedData.isGameOver ?? false {
                     self.gameState = .gameOver
-                }
-            }
-
-            // check winners
-            if let receivedWinners = decodedData.winners {
-                DispatchQueue.main.async {
-                    self.winners = receivedWinners
+                    self.winners = decodedData.winners ?? []
+                } else {
+                    self.gameState = .inGame
                 }
             }
 

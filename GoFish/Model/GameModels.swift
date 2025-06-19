@@ -20,14 +20,25 @@ struct GameData: Codable {
     let cardsRemainingInDeck: Int?
     let isGameOver: Bool?
     let winners: [Player]?
+    let currentPlayerId: String?
+    let gameLog: [String]?
+    let shuffledDeck: [Card]?
 
     init(
-        players: [Player]? = nil, cardsRemainingInDeck: Int? = nil,
-        isGameOver: Bool? = nil, winners: [Player]? = nil
+        players: [Player]? = nil,
+        cardsRemainingInDeck: Int? = nil,
+        isGameOver: Bool? = nil,
+        winners: [Player]? = nil,
+        currentPlayerId: String? = nil,
+        gameLog: [String]? = nil,
+        shuffledDeck: [Card]? = nil
     ) {
         self.players = players
         self.cardsRemainingInDeck = cardsRemainingInDeck
         self.isGameOver = isGameOver
         self.winners = winners
+        self.currentPlayerId = currentPlayerId
+        self.gameLog = gameLog
+        self.shuffledDeck = shuffledDeck
     }
 }

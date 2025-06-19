@@ -8,10 +8,19 @@
 import GameKit
 import SwiftUI
 
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+
 struct GameView: View {
     @ObservedObject var matchManager: MatchManager
 
     @State private var selectedCardIndex: Int?
+    @State private var selectedOpponentId: String?
+    @State private var selectedRank: Card.Rank?
+    @State private var showBooksSheet = false
 
     private var localPlayer: Player? {
         matchManager.players.first { $0.id == GKLocalPlayer.local.gamePlayerID }
@@ -52,17 +61,23 @@ struct GameView: View {
 
                 VStack {
                     Spacer()
-                    CardBackView()
-                        .frame(width: 80, height: 110)
-                        .overlay(alignment: .bottom) {
-                            Text("\(matchManager.cardsRemainingInDeck)")
-                                .font(.caption.bold())
-                                .foregroundColor(.white)
-                                .padding(4)
-                                .background(Color.black.opacity(0.5))
-                                .clipShape(Capsule())
-                                .offset(y: 15)
+                    ZStack {
+                        ForEach(0..<min(matchManager.cardsRemainingInDeck, 5), id: \.self) { i in
+                            CardBackView()
+                                .frame(width: 80, height: 110)
+                                .offset(y: CGFloat(i) * -2)
+                                .zIndex(Double(i))
                         }
+                    }
+                    .overlay(alignment: .bottom) {
+                        Text("\(matchManager.cardsRemainingInDeck)")
+                            .font(.caption.bold())
+                            .foregroundColor(.white)
+                            .padding(4)
+                            .background(Color.black.opacity(0.5))
+                            .clipShape(Capsule())
+                            .offset(y: 15)
+                    }
 
                     Text(matchManager.gameLog.last ?? "Game has started!")
                         .font(.headline)
@@ -89,7 +104,7 @@ struct GameView: View {
             VStack(spacing: 20) {
                 OpponentView(
                     player: player,
-                    isCurrentTurn: player.id == matchManager.currentPlayerId
+                    isCurrentTurn: matchManager.currentPlayerId == player.id
                 )
 
                 ZStack {
@@ -99,6 +114,27 @@ struct GameView: View {
                             .frame(width: 60, height: 85)
                             .offset(y: CGFloat(index) * 15)
                     }
+                }
+                if isMyTurn,
+                   let selectedCardIndex = selectedCardIndex,
+                   let selectedCard = localPlayer?.hand.sorted(by: { $0.rank < $1.rank })[safe: selectedCardIndex],
+                   player.id != localPlayer?.id {
+                    Button("Ask!") {
+                        matchManager.takeTurn(
+                            askingPlayerId: matchManager.localPlayer.gamePlayerID,
+                            askedPlayerId: player.id,
+                            requestedRank: selectedCard.rank
+                        )
+                        self.selectedCardIndex = nil
+                    }
+                    .padding(.top, 8)
+                    .font(.headline)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.white)
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black, lineWidth: 1))
+                    .clipShape(Capsule())
                 }
             }
             .frame(width: 100)
@@ -115,12 +151,14 @@ struct GameView: View {
                     ForEach(Array(hand.enumerated()), id: \.element.id) {
                         index,
                         card in
+                        let spacing: CGFloat = hand.count > 7 ? 25 : 40
                         CardView(card: card)
                             .frame(height: 140)
                             .offset(
-                                x: CGFloat(index - hand.count / 2) * 40,
+                                x: CGFloat(index - hand.count / 2) * spacing,
                                 y: selectedCardIndex == index ? -30 : 0
                             )
+                            .animation(.easeInOut(duration: 0.3), value: hand.count)
                             .onTapGesture {
                                 withAnimation(.spring()) {
                                     selectedCardIndex =
@@ -134,11 +172,15 @@ struct GameView: View {
             }
 
             HStack(spacing: 15) {
-                VStack {
-                    Text("Your Books")
-                        .font(.caption2)
-                    Text("★ \(localPlayer?.books ?? 0)")
-                        .font(.headline).bold()
+                Button {
+                    showBooksSheet = true
+                } label: {
+                    VStack {
+                        Text("Your Books")
+                            .font(.caption2)
+                        Text("★ \(localPlayer?.books ?? 0)")
+                            .font(.headline).bold()
+                    }
                 }
 
                 Image(systemName: "person.fill")
@@ -148,15 +190,9 @@ struct GameView: View {
                     .clipShape(Circle())
 
                 if isMyTurn {
-                    Button("Your Turn") {
-
-                    }
-                    .font(.headline.bold())
-                    .foregroundColor(.black)
-                    .padding()
-                    .background(Color.yellow)
-                    .clipShape(Capsule())
-                    .shadow(radius: 5)
+                    Text("Tap a card, then choose a player to ask.")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
                 } else {
                     Text("Waiting...")
                         .font(.headline.bold())
@@ -166,6 +202,26 @@ struct GameView: View {
                         .clipShape(Capsule())
                 }
             }
+        }
+        .sheet(isPresented: $showBooksSheet) {
+            VStack(spacing: 20) {
+                Text("Completed Books")
+                    .font(.title2).bold()
+
+                let bookRanks = matchManager.booksForPlayer(id: localPlayer?.id ?? "")
+                if bookRanks.isEmpty {
+                    Text("You haven't completed any books yet.")
+                        .foregroundColor(.secondary)
+                } else {
+                    ForEach(bookRanks, id: \.self) { rank in
+                        Text("• \(rank.rawValue)")
+                            .font(.headline)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding()
         }
     }
 }
