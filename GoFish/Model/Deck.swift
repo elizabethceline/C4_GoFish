@@ -28,13 +28,21 @@ struct Deck {
     }
 
     mutating func deal(count: Int) -> [Card] {
-        guard count <= cards.count else { return [] }
-        let dealtCards = Array(cards.prefix(count))
-        cards.removeFirst(count)
+        let countToDeal = min(count, cards.count)
+        let dealtCards = Array(cards.prefix(countToDeal))
+        cards.removeFirst(countToDeal)
         return dealtCards
     }
 
     var cardsRemaining: Int {
         return cards.count
+    }
+
+    var isEmpty: Bool {
+        return cards.isEmpty
+    }
+
+    var topCardDescription: String? {
+        cards.first.map { "\($0.rank.rawValue) of \($0.suit.rawValue)" }
     }
 }

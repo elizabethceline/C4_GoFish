@@ -12,6 +12,7 @@ struct Player: Identifiable, Codable, Hashable {
     let id: String
     let displayName: String
     var hand: [Card]
+    var bookRanks: [Card.Rank] = []
     var books: Int
 
     static func == (lhs: Player, rhs: Player) -> Bool {
