@@ -22,7 +22,7 @@ class MatchManager: NSObject, ObservableObject {
     @Published var winners: [Player] = []
 
     // Properti baru untuk mengontrol animasi pembagian kartu
-        @Published var cardsBeingDealt: [(card: Card, playerID: String)] = []
+    @Published var cardsBeingDealt: [(card: Card, playerID: String, dealOrder: Int)] = []
     
     var deck = Deck()
 
@@ -94,59 +94,72 @@ class MatchManager: NSObject, ObservableObject {
     }
     
     private func dealInitialCards() {
-           deck.createFullDeck()
-           deck.shuffle()
+        deck.createFullDeck()
+        deck.shuffle()
 
         var initialPlayers = [Player]()
-                let allGKPlayers = [localPlayer] + otherPlayers
-                for p in allGKPlayers {
-                    initialPlayers.append(
-                        Player(
-                            id: p.gamePlayerID, displayName: p.displayName,
-                            hand: [], books: 0))
+        let allGKPlayers = (self.match?.players.map { $0.gamePlayerID } ?? []) + [localPlayer.gamePlayerID]
+
+        // Buat objek Player awal dari GKPlayer yang ada
+        for gkPlayerID in allGKPlayers {
+            // Temukan GKPlayer yang sesuai untuk mendapatkan displayName
+            let gkPlayer = (self.match?.players.first(where: { $0.gamePlayerID == gkPlayerID })) ?? localPlayer
+            initialPlayers.append(
+                Player(
+                    id: gkPlayerID, displayName: gkPlayer.displayName,
+                    hand: [], books: 0))
+        }
+
+        DispatchQueue.main.async {
+            self.players = initialPlayers
+        }
+
+        var tempPlayerHands = [String: [Card]]()
+        allGKPlayers.forEach { tempPlayerHands[$0] = [] } // Menggunakan gamePlayerID string sebagai key
+
+        let initialHandSize = 5
+        let totalCardsToDeal = allGKPlayers.count * initialHandSize
+        var dealtCardsCount = 0
+
+        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in // Gunakan [weak self]
+            guard let self = self else { // Pastikan self masih ada
+                timer.invalidate()
+                return
+            }
+
+            guard let card = self.deck.deal(count: 1).first else {
+                timer.invalidate()
+                // Setelah semua kartu terbagi, panggil finalizeInitialDeal
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.finalizeInitialDeal(finalHands: tempPlayerHands)
                 }
-                // Update self.players di sini agar UI bisa menampilkan nama-nama pemain
-                // selama animasi berlangsung.
-                DispatchQueue.main.async {
-                    self.players = initialPlayers
-                }
-
-                // Variabel LOKAL untuk menyimpan tangan kartu, TIDAK di-publish.
-                var tempPlayerHands = [String: [Card]]()
-                allGKPlayers.forEach { tempPlayerHands[$0.gamePlayerID] = [] }
-                
-
-           let initialHandSize = 5
-           let totalCardsToDeal = allGKPlayers.count * initialHandSize
-           var dealtCardsCount = 0
-
-           Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [self] timer in
-               guard let card = self.deck.deal(count: 1).first else {
-                   timer.invalidate()
-                   return
-               }
+                return
+            }
 
             let playerIndex = dealtCardsCount % allGKPlayers.count
-            let receivingPlayerID = allGKPlayers[playerIndex].gamePlayerID
-                          
-                          // 1. Tambahkan kartu ke data tangan SEMENTARA.
-                          tempPlayerHands[receivingPlayerID]?.append(card)
+            let receivingPlayerID = allGKPlayers[playerIndex] // Cukup ID-nya saja, bukan objek GKPlayer lagi
 
-                          // 2. Tambahkan kartu ke properti animasi. Ini akan memicu UI update.
-                          DispatchQueue.main.async {
-                              self.cardsBeingDealt.append((card: card, playerID: receivingPlayerID))
-                          }
+            // 1. Tambahkan kartu ke data tangan SEMENTARA.
+            tempPlayerHands[receivingPlayerID]?.append(card)
 
-                          dealtCardsCount += 1
+            // 2. Tambahkan kartu ke properti animasi. Ini akan memicu UI update.
+            // Pastikan ini di main thread karena ini mengubah @Published
+            DispatchQueue.main.async {
+                self.cardsBeingDealt.append((card: card, playerID: receivingPlayerID, dealOrder: dealtCardsCount))
+            }
 
-               if dealtCardsCount == totalCardsToDeal {
-                   timer.invalidate()
-                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                       self.finalizeInitialDeal(finalHands: tempPlayerHands)
-                   }
-               }
-           }
-       }
+            dealtCardsCount += 1
+
+            if dealtCardsCount == totalCardsToDeal {
+                timer.invalidate()
+                // Panggil finalizeInitialDeal setelah semua kartu terbagi
+                // Ini akan memastikan animasi memiliki waktu untuk selesai sebelum kartu dihapus dari cardsBeingDealt
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.finalizeInitialDeal(finalHands: tempPlayerHands)
+                }
+            }
+        }
+    }
        
     private func finalizeInitialDeal(finalHands: [String: [Card]]) {
             // 4. Update state permainan utama dengan data final.

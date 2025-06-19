@@ -12,10 +12,10 @@ struct MenuView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Image("logo")
+            Image("logosketchy")
             .resizable()
             .scaledToFill()
-            .frame(width: 300, height: 150)
+            .frame(width: 200, height: 250)
             .padding(.bottom, 20)
 
             Button {
@@ -24,7 +24,8 @@ struct MenuView: View {
                 Image("playbutton")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 300, height: 100)
+                        .frame(width: 250, height: 100)
+                        .padding()
                         .opacity(matchManager.authenticationState != .authenticated || matchManager.gameState != .menu ? 0.5 : 1.0)
                         .animation(.easeInOut, value: matchManager.authenticationState != .authenticated || matchManager.gameState != .menu)
                 }

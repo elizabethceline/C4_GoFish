@@ -49,10 +49,14 @@ struct GameView: View {
                 VStack {
                     HStack(alignment: .top) {
                         playerSideView(for: opponent1)
+                            .padding(.leading, 0)
                         Spacer()
                         playerSideView(for: opponent2)
+                            .padding(.trailing, 35)
                     }
-
+                    .frame(maxWidth: .infinity)
+                    
+                    
                     VStack {
                         Spacer()
                         CardBackView()
@@ -77,17 +81,21 @@ struct GameView: View {
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
 
                     Spacer()
 
                     localPlayerView()
+                        .padding(.horizontal, 10)
                 }
                 .padding()
+           
+                
 
                 ForEach(
-                    Array(matchManager.cardsBeingDealt.enumerated()),
-                    id: \.offset
-                ) { index, dealInfo in
+                    matchManager.cardsBeingDealt,
+                    id: \.card.id
+                ) { dealInfo in
                     CardView(card: dealInfo.card)
                         .frame(width: 80, height: 110)
                         // Posisi awal kartu adalah di tengah (posisi dek)
@@ -110,9 +118,11 @@ struct GameView: View {
                         )
                         // Animasi dipicu dengan delay berurutan
                         .animation(
-                            .easeInOut(duration: 0.6)
-                                .delay(Double(index) * 0.15),
-                            value: dealAnimationTrigger
+                                   .linear(duration: 0.8)
+                                       .delay(Double(dealInfo.card.id.hashValue % 10) * 0.1), // Delay based on card ID for variation
+                                   // Atau, jika Anda ingin delay berurutan seperti sebelumnya, Anda harus menyertakan indeks dalam dealInfo
+                                   // Misalnya: .delay(Double(index) * 0.15) jika Anda mempertahankan Array(enumerated())
+                                   value: dealAnimationTrigger
                         )
                 }
                 .onAppear {
@@ -198,7 +208,7 @@ struct GameView: View {
                 }
                 .frame(height: 160)
             } else {
-                Spacer().frame(height: 160)
+                Spacer().frame(width: 160)
             }
 
             HStack(spacing: 15) {
