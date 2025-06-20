@@ -79,12 +79,24 @@ struct GameView: View {
                             .offset(y: 15)
                     }
 
-                    Text(matchManager.gameLog.last ?? "Game has started!")
-                        .font(.headline)
-                        .bold()
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .padding(.top, 10)
+                    VStack(spacing: 5) {
+                        if matchManager.gameLog.isEmpty {
+                            Text("Game has started!")
+                                .font(.headline)
+                                .bold()
+                        } else {
+                            ForEach(Array(matchManager.gameLog.suffix(2)), id: \.self) { logMessage in
+                                Text(logMessage)
+                                    .font(.headline)
+                                    .bold(logMessage == matchManager.gameLog.last)
+                                    .opacity(logMessage == matchManager.gameLog.last ? 1.0 : 0.4)
+                            }
+                        }
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .frame(minHeight: 80)
+                    .padding(.top, 10)
 
                     Spacer()
                 }

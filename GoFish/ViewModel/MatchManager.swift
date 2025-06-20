@@ -86,7 +86,7 @@ class MatchManager: NSObject, ObservableObject {
         let hostID = allPlayerIDs.sorted().first
 
         if localPlayer.gamePlayerID != hostID {
-            self.deck = Deck(from: []) // Empty deck for clients
+            self.deck = Deck(from: [])  // Empty deck for clients
             print("I am a client. Waiting for host to deal.")
             return
         }
@@ -140,9 +140,6 @@ class MatchManager: NSObject, ObservableObject {
             self.cardsRemainingInDeck = remainingCount
             self.gameState = .inGame
             self.currentPlayerId = self.players.first?.id
-            if !self.gameLog.contains(where: { $0.contains("made a book") }) {
-                self.gameLog.append("Cards have been dealt.")
-            }
         }
     }
     // Return all books (completed sets of 4) collected by a specific player
@@ -190,7 +187,9 @@ class MatchManager: NSObject, ObservableObject {
     }
 
     // Handle a player's turn: asking another player for a rank
-    func takeTurn(askingPlayerId: String, askedPlayerId: String, requestedRank: Card.Rank) {
+    func takeTurn(
+        askingPlayerId: String, askedPlayerId: String, requestedRank: Card.Rank
+    ) {
         guard gameState == .inGame else {
             print("Game is not active.")
             return
@@ -201,8 +200,14 @@ class MatchManager: NSObject, ObservableObject {
             return
         }
 
-        guard let askerIndex = players.firstIndex(where: { $0.id == askingPlayerId }),
-              let askedIndex = players.firstIndex(where: { $0.id == askedPlayerId }) else { return }
+        guard
+            let askerIndex = players.firstIndex(where: {
+                $0.id == askingPlayerId
+            }),
+            let askedIndex = players.firstIndex(where: {
+                $0.id == askedPlayerId
+            })
+        else { return }
 
         let askedPlayer = players[askedIndex]
         let matchingCards = askedPlayer.hand.filter { $0.rank == requestedRank }
@@ -212,7 +217,8 @@ class MatchManager: NSObject, ObservableObject {
             players[askerIndex].hand.append(contentsOf: matchingCards)
             players[askedIndex].hand.removeAll { $0.rank == requestedRank }
 
-            let message = "\(players[askerIndex].displayName) got \(matchingCards.count) \(requestedRank.rawValue)(s) from \(askedPlayer.displayName)."
+            let message =
+                "\(players[askerIndex].displayName) got \(matchingCards.count) \(requestedRank.rawValue)(s) from \(askedPlayer.displayName)."
             gameLog.append(message)
             print(message)
 
@@ -223,7 +229,9 @@ class MatchManager: NSObject, ObservableObject {
             if let drawnCard = deck.deal(count: 1).first {
                 players[askerIndex].hand.append(drawnCard)
                 usedCards.append(drawnCard)
-                gameLog.append("\(players[askerIndex].displayName) goes fish and draws a card.")
+                gameLog.append(
+                    "\(players[askerIndex].displayName) asked for \(requestedRank.rawValue) from \(askedPlayer.displayName) but got nothing. Sketchy!"
+                )
                 print("\(players[askerIndex].displayName) drew a card.")
                 cardsRemainingInDeck = deck.cardsRemaining
 
@@ -243,7 +251,7 @@ class MatchManager: NSObject, ObservableObject {
             currentPlayerId: self.currentPlayerId,
             gameLog: self.gameLog,
             shuffledDeck: deck.getCards()
-            
+
         )
         sendData(gameData)
 
@@ -253,7 +261,8 @@ class MatchManager: NSObject, ObservableObject {
     // Rotate to the next player's turn
     func advanceTurn() {
         guard let currentId = currentPlayerId,
-              let index = players.firstIndex(where: { $0.id == currentId }) else { return }
+            let index = players.firstIndex(where: { $0.id == currentId })
+        else { return }
         let nextIndex = (index + 1) % players.count
         currentPlayerId = players[nextIndex].id
         gameLog.append("It's now \(players[nextIndex].displayName)'s turn.")
