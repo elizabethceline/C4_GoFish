@@ -17,36 +17,41 @@ extension Collection {
 struct GameView: View {
     @ObservedObject var matchManager: MatchManager
 
-    @State private var selectedCardIndex: Int?
-    @State private var selectedOpponentId: String?
-    @State private var selectedRank: Card.Rank?
-    @State private var showBooksSheet = false
+    @State private var selectedCardIndex: Int?  // Tracks the index of the selected card in local player's hand
+    @State private var selectedOpponentId: String?  // Tracks the selected opponent's ID (not currently used)
+    @State private var selectedRank: Card.Rank?  // Tracks the selected rank (not currently used)
+    @State private var showBooksSheet = false  // Controls the visibility of the completed books sheet
 
     private var localPlayer: Player? {
+        // Finds the local player from the match manager's players list
         matchManager.players.first { $0.id == GKLocalPlayer.local.gamePlayerID }
     }
 
     private var otherPlayers: [Player] {
+        // Returns all players except the local player
         matchManager.players.filter {
             $0.id != GKLocalPlayer.local.gamePlayerID
         }
     }
 
     private var opponent1: Player? {
+        // Returns the first opponent if available
         otherPlayers.indices.contains(0) ? otherPlayers[0] : nil
     }
 
     private var opponent2: Player? {
+        // Returns the second opponent if available
         otherPlayers.indices.contains(1) ? otherPlayers[1] : nil
     }
 
     private var isMyTurn: Bool {
+        // Checks if it's the local player's turn
         localPlayer?.id == matchManager.currentPlayerId
     }
 
     var body: some View {
         ZStack {
-            // background amel
+            // Background image for game view
             Image("gameviewbackground")
                 .resizable()
                 .scaledToFill()
@@ -54,22 +59,24 @@ struct GameView: View {
 
             VStack {
                 HStack(alignment: .top) {
-                    playerSideView(for: opponent1)
+                    playerSideView(for: opponent1)  // Shows first opponent's view
                     Spacer()
-                    playerSideView(for: opponent2)
+                    playerSideView(for: opponent2)  // Shows second opponent's view
                 }
 
                 VStack {
                     Spacer()
                     ZStack {
+                        // Displays up to 5 cards representing the deck's remaining cards
                         ForEach(0..<min(matchManager.cardsRemainingInDeck, 5), id: \.self) { i in
                             CardBackView()
                                 .frame(width: 80, height: 110)
-                                .offset(y: CGFloat(i) * -2)
-                                .zIndex(Double(i))
+                                .offset(y: CGFloat(i) * -2)  // Slight vertical offset for stacked effect
+                                .zIndex(Double(i))  // Ensures proper layering of cards
                         }
                     }
                     .overlay(alignment: .bottom) {
+                        // Shows number of cards remaining in deck below the card stack
                         Text("\(matchManager.cardsRemainingInDeck)")
                             .font(.caption.bold())
                             .foregroundColor(.white)
@@ -81,10 +88,12 @@ struct GameView: View {
 
                     VStack(spacing: 5) {
                         if matchManager.gameLog.isEmpty {
+                            // Display when game log is empty
                             Text("Game has started!")
                                 .font(.headline)
                                 .bold()
                         } else {
+                            // Shows last two messages from game log with emphasis on the latest
                             ForEach(Array(matchManager.gameLog.suffix(2)), id: \.self) { logMessage in
                                 Text(logMessage)
                                     .font(.headline)
@@ -104,7 +113,7 @@ struct GameView: View {
 
                 Spacer()
 
-                localPlayerView()
+                localPlayerView()  // Shows local player's hand and controls
             }
             .padding()
         }
@@ -116,28 +125,31 @@ struct GameView: View {
             VStack(spacing: 20) {
                 OpponentView(
                     player: player,
-                    isCurrentTurn: matchManager.currentPlayerId == player.id
+                    isCurrentTurn: matchManager.currentPlayerId == player.id  // Highlights if it's opponent's turn
                 )
 
                 ZStack {
+                    // Shows up to 7 cards as card backs representing opponent's hand
                     ForEach(0..<min(player.hand.count, 7), id: \.self) {
                         index in
                         CardBackView()
                             .frame(width: 60, height: 85)
-                            .offset(y: CGFloat(index) * 15)
+                            .offset(y: CGFloat(index) * 15)  // Stacks cards vertically with spacing
                     }
                 }
                 if isMyTurn,
                    let selectedCardIndex = selectedCardIndex,
                    let selectedCard = localPlayer?.hand.sorted(by: { $0.rank < $1.rank })[safe: selectedCardIndex],
                    player.id != localPlayer?.id {
+                    // "Ask!" button appears if it's local player's turn, a card is selected, and opponent is not local player
                     Button("Ask!") {
+                        // Sends the takeTurn action with selected card rank and opponent ID
                         matchManager.takeTurn(
                             askingPlayerId: matchManager.localPlayer.gamePlayerID,
                             askedPlayerId: player.id,
                             requestedRank: selectedCard.rank
                         )
-                        self.selectedCardIndex = nil
+                        self.selectedCardIndex = nil  // Reset selected card after asking
                     }
                     .padding(.top, 8)
                     .font(.headline)
@@ -149,9 +161,9 @@ struct GameView: View {
                     .clipShape(Capsule())
                 }
             }
-            .frame(width: 100)
+            .frame(width: 100)  // Fixed width for opponent views
         } else {
-            Spacer().frame(width: 100)
+            Spacer().frame(width: 100)  // Placeholder space if no opponent
         }
     }
 
@@ -160,19 +172,21 @@ struct GameView: View {
         VStack(spacing: 10) {
             if let hand = localPlayer?.hand.sorted(by: { $0.rank < $1.rank }) {
                 ZStack {
+                    // Displays local player's hand with cards spaced horizontally and selectable
                     ForEach(Array(hand.enumerated()), id: \.element.id) {
                         index,
                         card in
-                        let spacing: CGFloat = hand.count > 7 ? 25 : 40
+                        let spacing: CGFloat = hand.count > 7 ? 25 : 40  // Adjust spacing based on hand size
                         CardView(card: card)
                             .frame(height: 140)
                             .offset(
-                                x: CGFloat(index - hand.count / 2) * spacing,
-                                y: selectedCardIndex == index ? -30 : 0
+                                x: CGFloat(index - hand.count / 2) * spacing,  // Center cards horizontally
+                                y: selectedCardIndex == index ? -30 : 0  // Raise selected card visually
                             )
                             .animation(.easeInOut(duration: 0.3), value: hand.count)
                             .onTapGesture {
                                 withAnimation(.spring()) {
+                                    // Toggle selection of card on tap
                                     selectedCardIndex =
                                         (selectedCardIndex == index)
                                         ? nil : index
@@ -185,12 +199,12 @@ struct GameView: View {
 
             HStack(spacing: 15) {
                 Button {
-                    showBooksSheet = true
+                    showBooksSheet = true  // Show sheet with completed books when tapped
                 } label: {
                     VStack {
                         Text("Your Books")
                             .font(.caption2)
-                        Text("★ \(localPlayer?.books ?? 0)")
+                        Text("★ \(localPlayer?.books ?? 0)")  // Displays number of completed books
                             .font(.headline).bold()
                     }
                 }
@@ -202,10 +216,12 @@ struct GameView: View {
                     .clipShape(Circle())
 
                 if isMyTurn {
+                    // Instruction shown when it's local player's turn
                     Text("Tap a card, then choose a player to ask.")
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.8))
                 } else {
+                    // Waiting message when it's not local player's turn
                     Text("Waiting...")
                         .font(.headline.bold())
                         .foregroundColor(.white.opacity(0.7))
@@ -222,9 +238,11 @@ struct GameView: View {
 
                 let bookRanks = matchManager.booksForPlayer(id: localPlayer?.id ?? "")
                 if bookRanks.isEmpty {
+                    // Message when no books completed yet
                     Text("You haven't completed any books yet.")
                         .foregroundColor(.secondary)
                 } else {
+                    // List all completed book ranks
                     ForEach(bookRanks, id: \.self) { rank in
                         Text("• \(rank.rawValue)")
                             .font(.headline)
