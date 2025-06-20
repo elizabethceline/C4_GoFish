@@ -59,57 +59,63 @@ struct GameView: View {
 
             VStack {
                 HStack(alignment: .top) {
-                    playerSideView(for: opponent1)  // Shows first opponent's view
-                    Spacer()
-                    playerSideView(for: opponent2)  // Shows second opponent's view
-                }
 
-                VStack {
-                    Spacer()
-                    ZStack {
-                        // Displays up to 5 cards representing the deck's remaining cards
-                        ForEach(0..<min(matchManager.cardsRemainingInDeck, 5), id: \.self) { i in
-                            CardBackView()
-                                .frame(width: 80, height: 110)
-                                .offset(y: CGFloat(i) * -2)  // Slight vertical offset for stacked effect
-                                .zIndex(Double(i))  // Ensures proper layering of cards
-                        }
-                    }
-                    .overlay(alignment: .bottom) {
-                        // Shows number of cards remaining in deck below the card stack
-                        Text("\(matchManager.cardsRemainingInDeck)")
-                            .font(.caption.bold())
-                            .foregroundColor(.white)
-                            .padding(4)
-                            .background(Color.black.opacity(0.5))
-                            .clipShape(Capsule())
-                            .offset(y: 15)
-                    }
+                    playerSideView(for: opponent1)
 
-                    VStack(spacing: 5) {
-                        if matchManager.gameLog.isEmpty {
-                            // Display when game log is empty
-                            Text("Game has started!")
-                                .font(.headline)
-                                .bold()
-                        } else {
-                            // Shows last two messages from game log with emphasis on the latest
-                            ForEach(Array(matchManager.gameLog.suffix(2)), id: \.self) { logMessage in
-                                Text(logMessage)
-                                    .font(.headline)
-                                    .bold(logMessage == matchManager.gameLog.last)
-                                    .opacity(logMessage == matchManager.gameLog.last ? 1.0 : 0.4)
+                    VStack {
+                        Spacer()
+                        Spacer()
+                        Spacer()
+
+                        ZStack {
+                            ForEach(
+                                0..<min(matchManager.cardsRemainingInDeck, 5),
+                                id: \.self
+                            ) { i in
+                                CardBackView()
+                                    .frame(width: 80, height: 110)
+                                    .offset(y: CGFloat(i) * -2)
+                                    .zIndex(Double(i))
                             }
                         }
-                    }
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .frame(minHeight: 80)
-                    .padding(.top, 10)
+                        .overlay(alignment: .bottom) {
+                            Text("\(matchManager.cardsRemainingInDeck)")
+                                .font(.caption.bold()).foregroundColor(.white)
+                                .padding(4).background(Color.black.opacity(0.5))
+                                .clipShape(Capsule()).offset(y: 15)
+                        }
 
-                    Spacer()
+                        VStack(spacing: 5) {
+                            if matchManager.gameLog.isEmpty {
+                                Text("Game has started!").font(.headline).bold()
+                            } else {
+                                ForEach(
+                                    Array(matchManager.gameLog.suffix(2)),
+                                    id: \.self
+                                ) { logMessage in
+                                    Text(logMessage)
+                                        .font(.headline)
+                                        .bold(
+                                            logMessage
+                                                == matchManager.gameLog.last
+                                        )
+                                        .opacity(
+                                            logMessage
+                                                == matchManager.gameLog.last
+                                                ? 1.0 : 0.5)
+                                }
+                            }
+                        }
+                        .multilineTextAlignment(.center).padding().frame(
+                            minHeight: 80
+                        ).padding(.top, 10)
+
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    playerSideView(for: opponent2)
                 }
-                .frame(maxWidth: .infinity)
 
                 Spacer()
 
@@ -138,26 +144,31 @@ struct GameView: View {
                     }
                 }
                 if isMyTurn,
-                   let selectedCardIndex = selectedCardIndex,
-                   let selectedCard = localPlayer?.hand.sorted(by: { $0.rank < $1.rank })[safe: selectedCardIndex],
-                   player.id != localPlayer?.id {
-                    // "Ask!" button appears if it's local player's turn, a card is selected, and opponent is not local player
+                    let selectedCardIndex = selectedCardIndex,
+                    let selectedCard = localPlayer?.hand.sorted(by: {
+                        $0.rank < $1.rank
+                    })[safe: selectedCardIndex],
+                    player.id != localPlayer?.id
+                {
                     Button("Ask!") {
                         // Sends the takeTurn action with selected card rank and opponent ID
                         matchManager.takeTurn(
-                            askingPlayerId: matchManager.localPlayer.gamePlayerID,
+                            askingPlayerId: matchManager.localPlayer
+                                .gamePlayerID,
                             askedPlayerId: player.id,
                             requestedRank: selectedCard.rank
                         )
                         self.selectedCardIndex = nil  // Reset selected card after asking
                     }
-                    .padding(.top, 8)
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.white)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black, lineWidth: 1))
+                    .background(Color.newRed)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10).stroke(
+                            Color.black, lineWidth: 1)
+                    )
                     .clipShape(Capsule())
                 }
             }
@@ -183,7 +194,9 @@ struct GameView: View {
                                 x: CGFloat(index - hand.count / 2) * spacing,  // Center cards horizontally
                                 y: selectedCardIndex == index ? -30 : 0  // Raise selected card visually
                             )
-                            .animation(.easeInOut(duration: 0.3), value: hand.count)
+                            .animation(
+                                .easeInOut(duration: 0.3), value: hand.count
+                            )
                             .onTapGesture {
                                 withAnimation(.spring()) {
                                     // Toggle selection of card on tap
@@ -204,22 +217,27 @@ struct GameView: View {
                     VStack {
                         Text("Your Books")
                             .font(.caption2)
-                        Text("★ \(localPlayer?.books ?? 0)")  // Displays number of completed books
+                            .foregroundColor(.black)
+                        Text("★ \(localPlayer?.books ?? 0)")
                             .font(.headline).bold()
+                            .foregroundColor(.black)
                     }
                 }
 
                 Image(systemName: "person.fill")
                     .font(.title)
                     .frame(width: 60, height: 60)
-                    .background(Color.orange.opacity(0.8))
+                    .foregroundColor(.white)
+                    .background(Color.newRed)
                     .clipShape(Circle())
 
                 if isMyTurn {
-                    // Instruction shown when it's local player's turn
-                    Text("Tap a card, then choose a player to ask.")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
+                    Text("Your Turn")
+                        .font(.headline.bold())
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.newRed)
+                        .clipShape(Capsule())
                 } else {
                     // Waiting message when it's not local player's turn
                     Text("Waiting...")
@@ -236,7 +254,8 @@ struct GameView: View {
                 Text("Completed Books")
                     .font(.title2).bold()
 
-                let bookRanks = matchManager.booksForPlayer(id: localPlayer?.id ?? "")
+                let bookRanks = matchManager.booksForPlayer(
+                    id: localPlayer?.id ?? "")
                 if bookRanks.isEmpty {
                     // Message when no books completed yet
                     Text("You haven't completed any books yet.")
