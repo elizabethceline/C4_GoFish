@@ -145,10 +145,7 @@ struct GameView: View {
                     }
                 }
                 if isMyTurn,
-                    let selectedCardIndex = selectedCardIndex,
-                    let selectedCard = localPlayer?.hand.sorted(by: {
-                        $0.rank < $1.rank
-                    })[safe: selectedCardIndex],
+                    let selectedRank = selectedRank,
                     player.id != localPlayer?.id
                 {
                     Button("Ask!") {
@@ -157,9 +154,9 @@ struct GameView: View {
                             askingPlayerId: matchManager.localPlayer
                                 .gamePlayerID,
                             askedPlayerId: player.id,
-                            requestedRank: selectedCard.rank
+                            requestedRank: selectedRank
                         )
-                        self.selectedCardIndex = nil  // Reset selected card after asking
+                        self.selectedRank = nil
                     }
                     .font(.headline)
                     .foregroundColor(.white)
@@ -191,21 +188,23 @@ struct GameView: View {
                         let spacing: CGFloat = hand.count > 7 ? 25 : 40  // Adjust spacing based on hand size
                         CardView(card: card)
                             .frame(height: 140)
-                            .offset(
-                                x: CGFloat(index - hand.count / 2) * spacing,  // Center cards horizontally
-                                y: selectedCardIndex == index ? -30 : 0  // Raise selected card visually
-                            )
                             .animation(
                                 .easeInOut(duration: 0.3), value: hand.count
                             )
                             .onTapGesture {
+                                guard isMyTurn else { return }
+
                                 withAnimation(.spring()) {
-                                    // Toggle selection of card on tap
-                                    selectedCardIndex =
-                                        (selectedCardIndex == index)
-                                        ? nil : index
+                                    selectedRank =
+                                        (selectedRank == card.rank)
+                                        ? nil : card.rank
                                 }
                             }
+                            .offset(
+                                x: CGFloat(index - hand.count / 2) * spacing,
+                                y: selectedRank == card.rank ? -30 : 0
+                            )
+
                     }
                 }
                 .frame(height: 160)
