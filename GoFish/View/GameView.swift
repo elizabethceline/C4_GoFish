@@ -64,8 +64,6 @@ struct GameView: View {
 
                     VStack {
                         Spacer()
-                        Spacer()
-                        Spacer()
 
                         ZStack {
                             ForEach(
@@ -84,38 +82,37 @@ struct GameView: View {
                                 .padding(4).background(Color.black.opacity(0.5))
                                 .clipShape(Capsule()).offset(y: 15)
                         }
-
-                        VStack(spacing: 5) {
-                            if matchManager.gameLog.isEmpty {
-                                Text("Game has started!").font(.headline).bold()
-                            } else {
-                                ForEach(
-                                    Array(matchManager.gameLog.suffix(2)),
-                                    id: \.self
-                                ) { logMessage in
-                                    Text(logMessage)
-                                        .font(.headline)
-                                        .bold(
-                                            logMessage
-                                                == matchManager.gameLog.last
-                                        )
-                                        .opacity(
-                                            logMessage
-                                                == matchManager.gameLog.last
-                                                ? 1.0 : 0.5)
-                                }
-                            }
-                        }
-                        .multilineTextAlignment(.center).padding().frame(
-                            minHeight: 80
-                        ).padding(.top, 10)
-
-                        Spacer()
                     }
                     .frame(maxWidth: .infinity)
 
                     playerSideView(for: opponent2)
                 }
+
+                VStack(spacing: 5) {
+                    if matchManager.gameLog.isEmpty {
+                        Text("Game has started!").font(.headline).bold()
+                    } else {
+                        ForEach(
+                            Array(matchManager.gameLog.suffix(2)),
+                            id: \.self
+                        ) { logMessage in
+                            Text(logMessage)
+                                .font(.headline)
+                                .bold(
+                                    logMessage
+                                        == matchManager.gameLog.last
+                                )
+                                .opacity(
+                                    logMessage
+                                        == matchManager.gameLog.last
+                                        ? 1.0 : 0.5)
+                        }
+                    }
+                }
+                .multilineTextAlignment(.center).padding().frame(
+                    minHeight: 80
+                ).padding(.top, 12)
+                .padding(.bottom, 20)
 
                 Spacer()
 
@@ -317,7 +314,10 @@ struct GameView: View {
 
         manager.players = [player1, player2, player3]
         manager.gameState = .inGame
-        manager.gameLog = ["I am a client. Waiting for host to deal.", "I am a client. Waiting for host to deal.", "It's your turn! I am a client. Waiting for host to deal."]
+        manager.gameLog = [
+            "Player A asked Player B for Queens",
+            "Player A drew a card from the deck",
+        ]
 
         manager.currentPlayerId = player1.id
 
