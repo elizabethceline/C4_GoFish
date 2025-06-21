@@ -32,8 +32,10 @@ struct OpponentView: View {
                 Text(player.displayName)
                     .font(.caption)
                     .bold()
+                    .foregroundColor(.black)
                 Text("★ Books: \(player.books)")
                     .font(.caption2)
+                    .foregroundColor(.black)
             }
         }
     }
