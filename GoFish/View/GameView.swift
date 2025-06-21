@@ -180,34 +180,37 @@ struct GameView: View {
     private func localPlayerView() -> some View {
         VStack(spacing: 10) {
             if let hand = localPlayer?.hand.sorted(by: { $0.rank < $1.rank }) {
-                ZStack {
-                    // Displays local player's hand with cards spaced horizontally and selectable
-                    ForEach(Array(hand.enumerated()), id: \.element.id) {
-                        index,
-                        card in
-                        let spacing: CGFloat = hand.count > 7 ? 25 : 40  // Adjust spacing based on hand size
-                        CardView(card: card)
-                            .frame(height: 140)
-                            .animation(
-                                .easeInOut(duration: 0.3), value: hand.count
-                            )
-                            .onTapGesture {
-                                guard isMyTurn else { return }
+                GeometryReader { geometry in
+                    let minSpacing: CGFloat = 18
+                    let maxSpacing: CGFloat = 40
+                    let spacing = max(
+                        minSpacing, min(maxSpacing, 280 / CGFloat(hand.count)))
+                    let totalWidth = spacing * CGFloat(hand.count - 1)
 
-                                withAnimation(.spring()) {
-                                    selectedRank =
-                                        (selectedRank == card.rank)
-                                        ? nil : card.rank
+                    ZStack {
+                        ForEach(Array(hand.enumerated()), id: \.element.id) {
+                            index, card in
+                            CardView(card: card)
+                                .frame(height: 140)
+                                .onTapGesture {
+                                    guard isMyTurn else { return }
+                                    withAnimation(.spring()) {
+                                        selectedRank =
+                                            (selectedRank == card.rank)
+                                            ? nil : card.rank
+                                    }
                                 }
-                            }
-                            .offset(
-                                x: CGFloat(index - hand.count / 2) * spacing,
-                                y: selectedRank == card.rank ? -30 : 0
-                            )
-
+                                .offset(
+                                    x: CGFloat(index) * spacing - totalWidth
+                                        / 2,
+                                    y: selectedRank == card.rank ? -30 : 0
+                                )
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(height: 160)
+
             }
 
             HStack(spacing: 15) {
@@ -314,7 +317,7 @@ struct GameView: View {
 
         manager.players = [player1, player2, player3]
         manager.gameState = .inGame
-        manager.gameLog = ["Welcome!", "Cards dealt.", "It's your turn!"]
+        manager.gameLog = ["I am a client. Waiting for host to deal.", "I am a client. Waiting for host to deal.", "It's your turn! I am a client. Waiting for host to deal."]
 
         manager.currentPlayerId = player1.id
 
