@@ -334,6 +334,13 @@ class MatchManager: NSObject, ObservableObject {
             self.gameLog = ["It's Sketchy Time!"]
         }
     }
+    
+    func getGKPlayer(by id: String) -> GKPlayer? {
+        if id == localPlayer.gamePlayerID {
+            return localPlayer
+        }
+        return otherPlayers.first(where: { $0.gamePlayerID == id })
+    }
 
     func sendData(_ data: GameData) {
         guard let match = match else { return }

@@ -224,12 +224,18 @@ struct GameView: View {
                     }
                 }
 
-                Image(systemName: "person.fill")
-                    .font(.title)
-                    .frame(width: 60, height: 60)
-                    .foregroundColor(.white)
-                    .background(Color.newRed)
-                    .clipShape(Circle())
+                if let gkPlayer = matchManager.getGKPlayer(
+                    by: localPlayer?.id ?? "")
+                {
+                    GameCenterAvatarView(
+                        player: gkPlayer, size: CGSize(width: 60, height: 60))
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.title)
+                        .frame(width: 60, height: 60)
+                        .background(Color.newRed)
+                        .clipShape(Circle())
+                }
 
                 if isMyTurn {
                     Text("Your Turn")

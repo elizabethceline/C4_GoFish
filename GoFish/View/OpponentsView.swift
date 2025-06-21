@@ -13,14 +13,21 @@ struct OpponentView: View {
     let isCurrentTurn: Bool
 
     var body: some View {
-        if let player = matchManager.players.first(where: { $0.id == playerId }) {
+        if let player = matchManager.players.first(where: { $0.id == playerId })
+        {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
-                    Image(systemName: "person.fill")
-                        .font(.title)
-                        .frame(width: 50, height: 50)
-                        .background(Color.gray.opacity(0.5))
-                        .clipShape(Circle())
+                    if let gkPlayer = matchManager.getGKPlayer(by: player.id) {
+                        GameCenterAvatarView(
+                            player: gkPlayer,
+                            size: CGSize(width: 50, height: 50))
+                    } else {
+                        Image(systemName: "person.fill")
+                            .font(.title)
+                            .frame(width: 50, height: 50)
+                            .background(Color.gray.opacity(0.5))
+                            .clipShape(Circle())
+                    }
 
                     if isCurrentTurn {
                         Circle()
@@ -29,6 +36,7 @@ struct OpponentView: View {
                             .overlay(Circle().stroke(Color.black, lineWidth: 2))
                     }
                 }
+
                 Text(player.displayName)
                     .font(.caption)
                     .bold()
