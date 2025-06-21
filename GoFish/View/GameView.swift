@@ -130,8 +130,9 @@ struct GameView: View {
         if let player = player {
             VStack(spacing: 20) {
                 OpponentView(
-                    player: player,
-                    isCurrentTurn: matchManager.currentPlayerId == player.id  // Highlights if it's opponent's turn
+                    matchManager: matchManager,
+                    playerId: player.id,
+                    isCurrentTurn: matchManager.currentPlayerId == player.id
                 )
 
                 ZStack {

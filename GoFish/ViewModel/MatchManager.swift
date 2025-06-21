@@ -169,6 +169,17 @@ class MatchManager: NSObject, ObservableObject {
                 print(logMessage)
             }
         }
+        
+        let gameData = GameData(
+            players: self.players,
+            cardsRemainingInDeck: self.deck.cardsRemaining,
+            isGameOver: false,
+            winners: nil,
+            currentPlayerId: self.currentPlayerId,
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
+        )
+        sendData(gameData)
     }
 
     @discardableResult
