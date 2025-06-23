@@ -279,14 +279,19 @@ class MatchManager: NSObject, ObservableObject {
                 gameLog.append(
                     "\(players[askerIndex].displayName) asked for \(requestedRank.rawValue) from \(askedPlayer.displayName) but got nothing. Sketchy!"
                 )
-                print("\(players[askerIndex].displayName) drew a card.")
                 cardsRemainingInDeck = deck.cardsRemaining
-
-                // Check for book from drawn card
-                checkForBooks(forPlayerId: askingPlayerId)
+                
+                if(drawnCard.rank == requestedRank) {
+                    gameLog.append(
+                        "\(players[askerIndex].displayName) got a \(drawnCard.rank.rawValue) from the deck!"
+                    )
+                    
+                    // Check for book from drawn card
+                    checkForBooks(forPlayerId: askingPlayerId)
+                } else {
+                    advanceTurn()
+                }
             }
-
-            advanceTurn()
         }
 
         // Sync data with other players
@@ -412,7 +417,8 @@ class MatchManager: NSObject, ObservableObject {
             requestedRank: rank
         )
     }
-    /// Start a local AI-only game, bypassing Game Center
+    
+    // Start a game against AI
     func startAIGame() {
         self.isVsAI = true
         self.gameState = .inGame
