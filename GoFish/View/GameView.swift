@@ -5,6 +5,7 @@
 //  Created by Elizabeth Celine Liong on 11/06/25.
 //
 
+import CoreHaptics
 import GameKit
 import SwiftUI
 
@@ -30,6 +31,8 @@ struct GameView: View {
     // Book animation state
     @State private var showBookAnimation = false
     @State private var bookRankToShow: Card.Rank?
+
+    @State private var hapticEngine: CHHapticEngine?
 
     private var localPlayer: Player? {
         // Finds the local player from the match manager's players list
@@ -174,6 +177,7 @@ struct GameView: View {
             .padding()
             .onAppear {
                 isDealingCards = true
+                prepareHaptics()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     withAnimation(.easeOut(duration: 0.6)) {
                         showDeckAnimation = true
@@ -194,6 +198,11 @@ struct GameView: View {
                     withAnimation {
                         showBookAnimation = false
                     }
+                }
+            }
+            .onChange(of: matchManager.currentPlayerId) { oldValue, newValue in
+                if newValue == localPlayer?.id {
+                    playTurnHaptic()
                 }
             }
         }
@@ -424,6 +433,51 @@ struct GameView: View {
             .padding()
         }
     }
+
+    func prepareHaptics() {
+        do {
+            self.hapticEngine = try CHHapticEngine()
+            try hapticEngine?.start()
+        } catch {
+            print(
+                "Haptic engine failed to start: \(error.localizedDescription)"
+            )
+        }
+    }
+
+    func playTurnHaptic() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            return
+        }
+
+        var events = [CHHapticEvent]()
+
+        let sharpness = CHHapticEventParameter(
+            parameterID: .hapticSharpness,
+            value: 1.0
+        )
+        let intensity = CHHapticEventParameter(
+            parameterID: .hapticIntensity,
+            value: 1.0
+        )
+
+        let event = CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [intensity, sharpness],
+            relativeTime: 0
+        )
+
+        events.append(event)
+
+        do {
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try hapticEngine?.makePlayer(with: pattern)
+            try player?.start(atTime: 0)
+        } catch {
+            print("Failed to play haptic: \(error.localizedDescription)")
+        }
+    }
+
 }
 
 #Preview {
