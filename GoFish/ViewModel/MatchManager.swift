@@ -176,6 +176,17 @@ class MatchManager: NSObject, ObservableObject {
                 lastCompletedBook = CompletedBook(playerId: forPlayerId, rank: rank)
             }
         }
+        
+        let gameData = GameData(
+            players: self.players,
+            cardsRemainingInDeck: self.deck.cardsRemaining,
+            isGameOver: false,
+            winners: nil,
+            currentPlayerId: self.currentPlayerId,
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
+        )
+        sendData(gameData)
     }
 
     @discardableResult
@@ -329,6 +340,13 @@ class MatchManager: NSObject, ObservableObject {
             self.otherPlayers = []
             self.gameLog = ["It's Sketchy Time!"]
         }
+    }
+    
+    func getGKPlayer(by id: String) -> GKPlayer? {
+        if id == localPlayer.gamePlayerID {
+            return localPlayer
+        }
+        return otherPlayers.first(where: { $0.gamePlayerID == id })
     }
 
     func sendData(_ data: GameData) {
