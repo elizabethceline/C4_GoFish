@@ -224,7 +224,7 @@ struct GameView: View {
                     HStack {
                         Spacer()
                         ZStack {
-                            ForEach(0..<min(player.hand.count, 7), id: \.self) {
+                            ForEach(0..<min(player.hand.count, 12), id: \.self) {
                                 index in
                                 CardBackView()
                                     .frame(width: 60, height: 85)
@@ -449,14 +449,7 @@ struct GameView: View {
                 Card(rank: .seven, suit: .spades),
                 Card(rank: .ace, suit: .diamonds),
                 Card(rank: .ace, suit: .clubs),
-                Card(rank: .five, suit: .hearts),
-
-                Card(rank: .two, suit: .spades),
-                Card(rank: .three, suit: .hearts),
-                Card(rank: .four, suit: .spades),
-                Card(rank: .five, suit: .diamonds),
-                Card(rank: .king, suit: .clubs),
-                Card(rank: .jack, suit: .hearts),
+                Card(rank: .five, suit: .hearts)
             ],
             books: 1
         )
