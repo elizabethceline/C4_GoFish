@@ -308,7 +308,11 @@ struct GameView: View {
                         ForEach(Array(hand.enumerated()), id: \.element.id) {
                             index,
                             card in
-                            let spacing: CGFloat = hand.count > 7 ? 25 : 40  // Adjust spacing based on hand size
+                            let spacing = max(
+                                18,
+                                min(40, 280 / CGFloat(hand.count))
+                            )
+                            let totalWidth = spacing * CGFloat(hand.count - 1)
                             let isDealt = dealtCardIDs.contains(card.id)
 
                             CardView(card: card)
@@ -347,12 +351,12 @@ struct GameView: View {
                                     x: isDealt
                                         ? CGFloat(index) * spacing - totalWidth
                                             / 2
-                                        : deckPosition.x - UIScreen.main.bounds
-                                            .width / 2,
+                                        : deckPosition.x - geometry.size.width
+                                            / 2,
                                     y: isDealt
                                         ? selectedRank == card.rank ? -30 : 0
                                         : deckPosition.y
-                                            - UIScreen.main.bounds.height + 160
+                                            - geometry.frame(in: .global).minY
                                 )
                         }
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -449,6 +453,13 @@ struct GameView: View {
                 Card(rank: .ace, suit: .diamonds),
                 Card(rank: .ace, suit: .clubs),
                 Card(rank: .five, suit: .hearts),
+
+                Card(rank: .two, suit: .spades),
+                Card(rank: .three, suit: .hearts),
+                Card(rank: .four, suit: .spades),
+                Card(rank: .five, suit: .diamonds),
+                Card(rank: .king, suit: .clubs),
+                Card(rank: .jack, suit: .hearts),
             ],
             books: 1
         )
