@@ -65,8 +65,8 @@ struct GameView: View {
                 ZStack {
                     ConfettiView(colors: [.white, .black])
                     HStack(spacing: -30) {
-                        ForEach(0..<4, id: \.self) { _ in
-                            CardView(card: Card(rank: rank, suit: .spades))
+                        ForEach(Card.Suit.allCases, id: \.self) { suit in
+                            CardView(card: Card(rank: rank, suit: suit))
                                 .frame(width: 80, height: 120)
                                 .transition(.scale)
                         }
