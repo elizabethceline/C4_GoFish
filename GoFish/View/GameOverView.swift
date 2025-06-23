@@ -36,11 +36,10 @@ struct GameOverView: View {
                         
                        
                         HStack(spacing: 15) {
-                            Text(player.displayName)
+                            Text(player.id == matchManager.localPlayer.gamePlayerID ? "You" : player.displayName)
                                 .font(isWinner ? .system(size: 20).bold() : .system(size: 20))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
-                            
                             
                             if isWinner {
                                 Image(systemName: "trophy.fill")
@@ -103,7 +102,7 @@ struct GameOverView: View {
     let manager = MatchManager()
 
     let player1 = Player(id: "1", displayName: "Player A", hand: [], books: 2)
-    let player2 = Player(id: "2", displayName: "Player asdasdasdB", hand: [], books: 3)
+    let player2 = Player(id: "2", displayName: "Player B", hand: [], books: 3)
     let player3 = Player(id: "3", displayName: "Player C", hand: [], books: 1)
 
     manager.players = [player1, player2, player3]
