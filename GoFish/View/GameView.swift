@@ -258,26 +258,24 @@ struct GameView: View {
                 .frame(height: 160)
 
                 if isMyTurn,
-                    let selectedCardIndex = selectedCardIndex,
-                    let selectedCard = localPlayer?.hand.sorted(by: {
-                        $0.rank < $1.rank
-                    })[safe: selectedCardIndex],
+                    let selectedRank = selectedRank,
                     player.id != localPlayer?.id
                 {
                     Button("Ask!") {
+                        // Sends the takeTurn action with selected card rank and opponent ID
                         matchManager.takeTurn(
                             askingPlayerId: matchManager.localPlayer
                                 .gamePlayerID,
                             askedPlayerId: player.id,
-                            requestedRank: selectedCard.rank
+                            requestedRank: selectedRank
                         )
-                        self.selectedCardIndex = nil  // Reset selected card after asking
+                        self.selectedRank = nil
                     }
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.black)
+                    .background(Color.newRed)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10).stroke(
                             Color.black,
@@ -297,56 +295,67 @@ struct GameView: View {
     private func localPlayerView() -> some View {
         VStack(spacing: 10) {
             if let hand = localPlayer?.hand.sorted(by: { $0.rank < $1.rank }) {
-                ZStack {
-                    // Displays local player's hand with cards spaced horizontally and selectable
-                    ForEach(Array(hand.enumerated()), id: \.element.id) {
-                        index,
-                        card in
-                        let spacing: CGFloat = hand.count > 7 ? 25 : 40  // Adjust spacing based on hand size
-                        let isDealt = dealtCardIDs.contains(card.id)
+                GeometryReader { geometry in
+                    let minSpacing: CGFloat = 18
+                    let maxSpacing: CGFloat = 40
+                    let spacing = max(
+                        minSpacing,
+                        min(maxSpacing, 280 / CGFloat(hand.count))
+                    )
+                    let totalWidth = spacing * CGFloat(hand.count - 1)
+                    ZStack {
+                        // Displays local player's hand with cards spaced horizontally and selectable
+                        ForEach(Array(hand.enumerated()), id: \.element.id) {
+                            index,
+                            card in
+                            let spacing: CGFloat = hand.count > 7 ? 25 : 40  // Adjust spacing based on hand size
+                            let isDealt = dealtCardIDs.contains(card.id)
 
-                        CardView(card: card)
-                            .frame(height: 140)
-                            .offset(
-                                x: isDealt
-                                    ? CGFloat(index - hand.count / 2) * spacing
-                                    : deckPosition.x - UIScreen.main.bounds
-                                        .width / 2,
-                                y: isDealt
-                                    ? (selectedCardIndex == index ? -30 : 0)
-                                    : deckPosition.y
-                                        - UIScreen.main.bounds.height + 160
-                            )
-                            .scaleEffect(isDealt ? 1 : 0.1)
-                            .opacity(isDealt ? 1 : 0)
-                            .animation(
-                                .easeOut(duration: 0.3).delay(
-                                    Double(index) * 0.15
-                                ),
-                                value: dealtCardIDs
-                            )
-                            .onAppear {
-                                if isDealingCards {
-                                    DispatchQueue.main.asyncAfter(
-                                        deadline: .now() + Double(index) * 0.15
-                                    ) {
-                                        dealtCardIDs.insert(card.id)
+                            CardView(card: card)
+                                .frame(height: 140)
+                                .scaleEffect(isDealt ? 1 : 0.1)
+                                .opacity(isDealt ? 1 : 0)
+                                .animation(
+                                    .easeOut(duration: 0.3).delay(
+                                        Double(index) * 0.15
+                                    ),
+                                    value: dealtCardIDs
+                                )
+                                .onAppear {
+                                    if isDealingCards {
+                                        DispatchQueue.main.asyncAfter(
+                                            deadline: .now() + Double(index)
+                                                * 0.15
+                                        ) {
+                                            dealtCardIDs.insert(card.id)
+                                        }
                                     }
                                 }
-                            }
-                            .animation(
-                                .easeInOut(duration: 0.3),
-                                value: hand.count
-                            )
-                            .onTapGesture {
-                                withAnimation(.spring()) {
-                                    // Toggle selection of card on tap
-                                    selectedCardIndex =
-                                        (selectedCardIndex == index)
-                                        ? nil : index
+                                .animation(
+                                    .easeInOut(duration: 0.3),
+                                    value: hand.count
+                                )
+                                .onTapGesture {
+                                    guard isMyTurn else { return }
+                                    withAnimation(.spring()) {
+                                        selectedRank =
+                                            (selectedRank == card.rank)
+                                            ? nil : card.rank
+                                    }
                                 }
-                            }
-                    }
+                                .offset(
+                                    x: isDealt
+                                        ? CGFloat(index) * spacing - totalWidth
+                                            / 2
+                                        : deckPosition.x - UIScreen.main.bounds
+                                            .width / 2,
+                                    y: isDealt
+                                        ? selectedRank == card.rank ? -30 : 0
+                                        : deckPosition.y
+                                            - UIScreen.main.bounds.height + 160
+                                )
+                        }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(height: 160)
             }
@@ -365,12 +374,20 @@ struct GameView: View {
                     }
                 }
 
-                Image(systemName: "person.fill")
-                    .font(.title)
-                    .frame(width: 60, height: 60)
-                    .foregroundColor(.white)
-                    .background(Color.black)
-                    .clipShape(Circle())
+                if let gkPlayer = matchManager.getGKPlayer(
+                    by: localPlayer?.id ?? ""
+                ) {
+                    GameCenterAvatarView(
+                        player: gkPlayer,
+                        size: CGSize(width: 60, height: 60)
+                    )
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.title)
+                        .frame(width: 60, height: 60)
+                        .background(Color.newRed)
+                        .clipShape(Circle())
+                }
 
                 if isMyTurn {
                     Text("Your Turn")
