@@ -64,17 +64,7 @@ struct GameView: View {
             if showBookAnimation, let rank = bookRankToShow {
                 ZStack {
                     ConfettiView(colors: [.white, .black])
-                    HStack(spacing: -30) {
-                        ForEach(Card.Suit.allCases, id: \.self) { suit in
-                            CardView(card: Card(rank: rank, suit: suit))
-                                .frame(width: 80, height: 120)
-                                .transition(.scale)
-                        }
-                    }
-                    .padding()
-                    .background(Color.white.opacity(0.85).blur(radius: 1))
-                    .cornerRadius(16)
-                    .shadow(radius: 10)
+                    BookCardView(rank: rank)
                 }
                 .transition(.opacity.combined(with: .scale))
                 .zIndex(100)
@@ -224,7 +214,8 @@ struct GameView: View {
                     HStack {
                         Spacer()
                         ZStack {
-                            ForEach(0..<min(player.hand.count, 12), id: \.self) {
+                            ForEach(0..<min(player.hand.count, 12), id: \.self)
+                            {
                                 index in
                                 CardBackView()
                                     .frame(width: 60, height: 85)
@@ -423,9 +414,9 @@ struct GameView: View {
                 } else {
                     // List all completed book ranks
                     ForEach(bookRanks, id: \.self) { rank in
-                        Text("• \(rank.rawValue)")
-                            .font(.headline)
+                        BookCardView(rank: rank)
                     }
+
                 }
 
                 Spacer()
@@ -449,9 +440,9 @@ struct GameView: View {
                 Card(rank: .seven, suit: .spades),
                 Card(rank: .ace, suit: .diamonds),
                 Card(rank: .ace, suit: .clubs),
-                Card(rank: .five, suit: .hearts)
+                Card(rank: .five, suit: .hearts),
             ],
-            books: 1
+            books: 0
         )
 
         let opponentHand1 = (0..<5).map { _ in Card(rank: .queen, suit: .clubs)
