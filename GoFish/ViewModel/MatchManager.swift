@@ -8,6 +8,11 @@
 import Foundation
 import GameKit
 
+struct CompletedBook: Equatable {
+    let playerId: String
+    let rank: Card.Rank
+}
+
 class MatchManager: NSObject, ObservableObject {
     @Published var authenticationState = PlayerAuthState.authenticating
     @Published var match: GKMatch?
@@ -21,6 +26,7 @@ class MatchManager: NSObject, ObservableObject {
     @Published var cardsRemainingInDeck: Int = 52
     @Published var winners: [Player] = []
     @Published var isVsAI: Bool = false
+    @Published var lastCompletedBook: CompletedBook?
 
     var deck = Deck()
     // Store the original dealt deck for memory tracking
@@ -189,8 +195,20 @@ class MatchManager: NSObject, ObservableObject {
                     "🎉 \(playerName) made a book of \(rank.rawValue)!"
                 gameLog.append(logMessage)
                 print(logMessage)
+                lastCompletedBook = CompletedBook(playerId: forPlayerId, rank: rank)
             }
         }
+        
+        let gameData = GameData(
+            players: self.players,
+            cardsRemainingInDeck: self.deck.cardsRemaining,
+            isGameOver: false,
+            winners: nil,
+            currentPlayerId: self.currentPlayerId,
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
+        )
+        sendData(gameData)
     }
 
     @discardableResult
@@ -356,6 +374,13 @@ class MatchManager: NSObject, ObservableObject {
             self.otherPlayers = []
             self.gameLog = ["It's Sketchy Time!"]
         }
+    }
+    
+    func getGKPlayer(by id: String) -> GKPlayer? {
+        if id == localPlayer.gamePlayerID {
+            return localPlayer
+        }
+        return otherPlayers.first(where: { $0.gamePlayerID == id })
     }
 
     func sendData(_ data: GameData) {

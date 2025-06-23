@@ -36,9 +36,10 @@ struct GameOverView: View {
                         
                        
                         HStack(spacing: 15) {
-                            Text(player.displayName)
+                            Text(player.id == matchManager.localPlayer.gamePlayerID ? "You" : player.displayName)
                                 .font(isWinner ? .system(size: 20).bold() : .system(size: 20))
-                            
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                             
                             if isWinner {
                                 Image(systemName: "trophy.fill")
@@ -72,7 +73,7 @@ struct GameOverView: View {
                     }
                 }
                 
-                .frame(width: 270, height: 70)
+                .frame(width: 300, height: 70)
             }
             .padding(.horizontal)
 
