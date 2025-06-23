@@ -31,6 +31,21 @@ struct MenuView: View {
                 }
             .disabled(matchManager.authenticationState != .authenticated || matchManager.gameState != .menu)
             
+            Button {
+                matchManager.startAIGame()
+            } label: {
+                Text("Play Against AI")
+                    .font(.title2.bold())
+                    .foregroundColor(.white)
+                    .frame(width: 250, height: 60)
+                    .background(Color.blue)
+                    .cornerRadius(12)
+                    .padding(.top, 10)
+            }
+            .disabled(matchManager.gameState != .menu)
+            .opacity(matchManager.gameState != .menu ? 0.5 : 1.0)
+            .animation(.easeInOut, value: matchManager.gameState != .menu)
+            
             if matchManager.authenticationState != .authenticated {
                 Text(matchManager.authenticationState.rawValue)
                     .font(.headline)

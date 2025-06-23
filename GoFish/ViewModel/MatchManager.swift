@@ -20,6 +20,7 @@ class MatchManager: NSObject, ObservableObject {
     @Published var currentPlayerId: String?
     @Published var cardsRemainingInDeck: Int = 52
     @Published var winners: [Player] = []
+    @Published var isVsAI: Bool = false
 
     var deck = Deck()
     // Store the original dealt deck for memory tracking
@@ -115,7 +116,28 @@ class MatchManager: NSObject, ObservableObject {
                     hand: playerHand, books: 0))
         }
 
+        if isVsAI {
+            let aiPlayer1 = Player(
+                id: "AI-1",
+                displayName: "SketchyBot 🤖 1",
+                hand: deck.deal(count: initialHandSize),
+                books: 0
+            )
+            let aiPlayer2 = Player(
+                id: "AI-2",
+                displayName: "SketchyBot 🤖 2",
+                hand: deck.deal(count: initialHandSize),
+                books: 0
+            )
+            allPlayersInfo.append(contentsOf: [aiPlayer1, aiPlayer2])
+        }
+
         self.players = allPlayersInfo
+        if isVsAI, let currentId = self.players.first?.id, currentId.starts(with: "AI") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.runAITurn()
+            }
+        }
         // Remember all dealt cards for memory tracking
         self.dealtCards = allPlayersInfo.flatMap { $0.hand }
         self.usedCards = self.dealtCards
@@ -224,6 +246,13 @@ class MatchManager: NSObject, ObservableObject {
 
             // Check for books
             checkForBooks(forPlayerId: askingPlayerId)
+
+            // AI gets another turn if it succeeded
+            if isVsAI, askingPlayerId.starts(with: "AI") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.runAITurn()
+                }
+            }
         } else {
             // Go Fish
             if let drawnCard = deck.deal(count: 1).first {
@@ -276,6 +305,11 @@ class MatchManager: NSObject, ObservableObject {
             shuffledDeck: deck.getCards()
         )
         sendData(gameData)
+        if isVsAI, let currentId = currentPlayerId, currentId.starts(with: "AI") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.runAITurn()
+            }
+        }
     }
 
     func determineWinner() {
@@ -333,5 +367,30 @@ class MatchManager: NSObject, ObservableObject {
             print(
                 "Error encoding or sending data: \(error.localizedDescription)")
         }
+    }
+    
+    func runAITurn() {
+        guard let aiPlayer = players.first(where: { $0.id == currentPlayerId && $0.id.starts(with: "AI") }) else { return }
+        guard let rank = aiPlayer.hand.randomElement()?.rank else {
+            advanceTurn()
+            return
+        }
+        let targets = players.filter { $0.id != aiPlayer.id }
+        guard let target = targets.randomElement() else {
+            advanceTurn()
+            return
+        }
+
+        takeTurn(
+            askingPlayerId: aiPlayer.id,
+            askedPlayerId: target.id,
+            requestedRank: rank
+        )
+    }
+    /// Start a local AI-only game, bypassing Game Center
+    func startAIGame() {
+        self.isVsAI = true
+        self.gameState = .inGame
+        self.dealInitialCards()
     }
 }
