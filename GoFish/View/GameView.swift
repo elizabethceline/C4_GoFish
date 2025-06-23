@@ -93,8 +93,6 @@ struct GameView: View {
 
                     VStack {
                         Spacer()
-                        Spacer()
-                        Spacer()
 
                         ZStack {
                             ForEach(
@@ -146,39 +144,38 @@ struct GameView: View {
                                 .padding(4).background(Color.black.opacity(0.5))
                                 .clipShape(Capsule()).offset(y: 15)
                         }
-
-                        VStack(spacing: 5) {
-                            if matchManager.gameLog.isEmpty {
-                                Text("Game has started!").font(.headline).bold()
-                            } else {
-                                ForEach(
-                                    Array(matchManager.gameLog.suffix(2)),
-                                    id: \.self
-                                ) { logMessage in
-                                    Text(logMessage)
-                                        .font(.headline)
-                                        .bold(
-                                            logMessage
-                                                == matchManager.gameLog.last
-                                        )
-                                        .opacity(
-                                            logMessage
-                                                == matchManager.gameLog.last
-                                                ? 1.0 : 0.5
-                                        )
-                                }
-                            }
-                        }
-                        .multilineTextAlignment(.center).padding().frame(
-                            minHeight: 80
-                        ).padding(.top, 10)
-
-                        Spacer()
                     }
                     .frame(maxWidth: .infinity)
 
                     playerSideView(for: opponent2)
                 }
+
+                VStack(spacing: 5) {
+                    if matchManager.gameLog.isEmpty {
+                        Text("Game has started!").font(.headline).bold()
+                    } else {
+                        ForEach(
+                            Array(matchManager.gameLog.suffix(2)),
+                            id: \.self
+                        ) { logMessage in
+                            Text(logMessage)
+                                .font(.headline)
+                                .bold(
+                                    logMessage
+                                        == matchManager.gameLog.last
+                                )
+                                .opacity(
+                                    logMessage
+                                        == matchManager.gameLog.last
+                                        ? 1.0 : 0.5
+                                )
+                        }
+                    }
+                }
+                .multilineTextAlignment(.center).padding().frame(
+                    minHeight: 80
+                ).padding(.top, 12)
+                .padding(.bottom, 20)
 
                 Spacer()
 
