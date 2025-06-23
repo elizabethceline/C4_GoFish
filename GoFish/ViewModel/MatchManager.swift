@@ -8,6 +8,11 @@
 import Foundation
 import GameKit
 
+struct CompletedBook: Equatable {
+    let playerId: String
+    let rank: Card.Rank
+}
+
 class MatchManager: NSObject, ObservableObject {
     @Published var authenticationState = PlayerAuthState.authenticating
     @Published var match: GKMatch?
@@ -20,6 +25,7 @@ class MatchManager: NSObject, ObservableObject {
     @Published var currentPlayerId: String?
     @Published var cardsRemainingInDeck: Int = 52
     @Published var winners: [Player] = []
+    @Published var lastCompletedBook: CompletedBook?
 
     var deck = Deck()
     // Store the original dealt deck for memory tracking
@@ -167,6 +173,7 @@ class MatchManager: NSObject, ObservableObject {
                     "🎉 \(playerName) made a book of \(rank.rawValue)!"
                 gameLog.append(logMessage)
                 print(logMessage)
+                lastCompletedBook = CompletedBook(playerId: forPlayerId, rank: rank)
             }
         }
         

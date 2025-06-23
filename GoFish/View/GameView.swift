@@ -17,10 +17,19 @@ extension Collection {
 struct GameView: View {
     @ObservedObject var matchManager: MatchManager
 
-    @State private var selectedCardIndex: Int?  // Tracks the index of the selected card in local player's hand
-    @State private var selectedOpponentId: String?  // Tracks the selected opponent's ID (not currently used)
-    @State private var selectedRank: Card.Rank?  // Tracks the selected rank (not currently used)
-    @State private var showBooksSheet = false  // Controls the visibility of the completed books sheet
+    @State private var selectedCardIndex: Int?
+    @State private var selectedOpponentId: String?
+    @State private var selectedRank: Card.Rank?
+    @State private var showBooksSheet = false
+
+    @State private var isDealingCards = false
+    @State private var dealtCardIDs: Set<String> = []
+    @State private var deckPosition: CGPoint = .zero
+    @State private var showDeckAnimation = false
+
+    // Book animation state
+    @State private var showBookAnimation = false
+    @State private var bookRankToShow: Card.Rank?
 
     private var localPlayer: Player? {
         // Finds the local player from the match manager's players list
@@ -51,6 +60,26 @@ struct GameView: View {
 
     var body: some View {
         ZStack {
+            // Book animation overlay (on top)
+            if showBookAnimation, let rank = bookRankToShow {
+                ZStack {
+                    ConfettiView(colors: [.white, .black])
+                    HStack(spacing: -30) {
+                        ForEach(0..<4, id: \.self) { _ in
+                            CardView(card: Card(rank: rank, suit: .spades))
+                                .frame(width: 80, height: 120)
+                                .transition(.scale)
+                        }
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.85).blur(radius: 1))
+                    .cornerRadius(16)
+                    .shadow(radius: 10)
+                }
+                .transition(.opacity.combined(with: .scale))
+                .zIndex(100)
+            }
+
             // Background image for game view
             Image("gameviewbackground")
                 .resizable()
@@ -72,10 +101,22 @@ struct GameView: View {
                             ) { i in
                                 CardBackView()
                                     .frame(width: 80, height: 110)
-                                    .offset(y: CGFloat(i) * -2)
+                                    .rotationEffect(.degrees(showDeckAnimation ? Double(i) * 2 - 4 : 20))
+                                    .offset(y: showDeckAnimation ? CGFloat(i) * -4 : 300)
+                                    .scaleEffect(showDeckAnimation ? (1 - CGFloat(i) * 0.03) : 0.1)
                                     .zIndex(Double(i))
+                                    .animation(.easeOut(duration: 0.6).delay(Double(i) * 0.1), value: showDeckAnimation)
                             }
                         }
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        let frame = geo.frame(in: .named("deckSpace"))
+                                        deckPosition = CGPoint(x: frame.midX, y: frame.midY)
+                                    }
+                            }
+                        )
                         .overlay(alignment: .bottom) {
                             Text("\(matchManager.cardsRemainingInDeck)")
                                 .font(.caption.bold()).foregroundColor(.white)
@@ -119,7 +160,28 @@ struct GameView: View {
                 localPlayerView()  // Shows local player's hand and controls
             }
             .padding()
+            .onAppear {
+                isDealingCards = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    withAnimation(.easeOut(duration: 0.6)) {
+                        showDeckAnimation = true
+                    }
+                }
+            }
+            .onChange(of: matchManager.lastCompletedBook, initial: false) { old, new in
+                guard let book = new, book.playerId == localPlayer?.id else { return }
+                bookRankToShow = book.rank
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showBookAnimation = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        showBookAnimation = false
+                    }
+                }
+            }
         }
+        .coordinateSpace(name: "deckSpace")
     }
 
     @ViewBuilder
@@ -132,21 +194,36 @@ struct GameView: View {
                     isCurrentTurn: matchManager.currentPlayerId == player.id
                 )
 
-                ZStack {
-                    // Shows up to 7 cards as card backs representing opponent's hand
-                    ForEach(0..<min(player.hand.count, 7), id: \.self) {
-                        index in
-                        CardBackView()
-                            .frame(width: 60, height: 85)
-                            .offset(y: CGFloat(index) * 15)  // Stacks cards vertically with spacing
+                GeometryReader { geo in
+                    HStack {
+                        Spacer()
+                        ZStack {
+                            ForEach(0..<min(player.hand.count, 7), id: \.self) { index in
+                                CardBackView()
+                                    .frame(width: 60, height: 85)
+                                    .scaleEffect(isDealingCards ? 1 : 0.1)
+                                    .opacity(isDealingCards ? 1 : 0)
+                                    .offset(
+                                        x: isDealingCards ? 0 : UIScreen.main.bounds.midX - geo.frame(in: .global).midX,
+                                        y: isDealingCards ? CGFloat(index) * 15 : UIScreen.main.bounds.midY - geo.frame(in: .global).midY
+                                    )
+                                    .animation(
+                                        .easeOut(duration: 0.3).delay(Double(index) * 0.2),
+                                        value: isDealingCards
+                                    )
+                            }
+                        }
+                        .frame(width: 70)
+                        Spacer()
                     }
                 }
+                .frame(height: 160)
+
                 if isMyTurn,
                     let selectedRank = selectedRank,
                     player.id != localPlayer?.id
                 {
                     Button("Ask!") {
-                        // Sends the takeTurn action with selected card rank and opponent ID
                         matchManager.takeTurn(
                             askingPlayerId: matchManager.localPlayer
                                 .gamePlayerID,
@@ -159,7 +236,7 @@ struct GameView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.newRed)
+                    .background(Color.black)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10).stroke(
                             Color.black, lineWidth: 1)
@@ -212,7 +289,7 @@ struct GameView: View {
 
             HStack(spacing: 15) {
                 Button {
-                    showBooksSheet = true  // Show sheet with completed books when tapped
+                    showBooksSheet = true
                 } label: {
                     VStack {
                         Text("Your Books")
@@ -242,7 +319,7 @@ struct GameView: View {
                         .font(.headline.bold())
                         .foregroundColor(.white)
                         .padding()
-                        .background(Color.newRed)
+                        .background(Color.black)
                         .clipShape(Capsule())
                 } else {
                     // Waiting message when it's not local player's turn
