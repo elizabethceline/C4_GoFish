@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Card: Identifiable, Codable, Hashable {
+struct Card: Identifiable, Codable, Hashable, Equatable {
     var id: String { "\(rank.rawValue)-\(suit.rawValue)" }
 
     let rank: Rank

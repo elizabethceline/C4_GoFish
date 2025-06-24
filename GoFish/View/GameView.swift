@@ -5,6 +5,7 @@
 //  Created by Elizabeth Celine Liong on 11/06/25.
 //
 
+import CoreHaptics
 import GameKit
 import SwiftUI
 
@@ -22,31 +23,57 @@ struct GameView: View {
     @State private var selectedRank: Card.Rank?
     @State private var showBooksSheet = false
 
+    @State private var isDealingCards = false
+    @State private var dealtCardIDs: Set<String> = []
+    @State private var deckPosition: CGPoint = .zero
+    @State private var showDeckAnimation = false
+
+    // Book animation state
+    @State private var showBookAnimation = false
+    @State private var bookRankToShow: Card.Rank?
+
+    @State private var hapticEngine: CHHapticEngine?
+
     private var localPlayer: Player? {
+        // Finds the local player from the match manager's players list
         matchManager.players.first { $0.id == GKLocalPlayer.local.gamePlayerID }
     }
 
     private var otherPlayers: [Player] {
+        // Returns all players except the local player
         matchManager.players.filter {
             $0.id != GKLocalPlayer.local.gamePlayerID
         }
     }
 
     private var opponent1: Player? {
+        // Returns the first opponent if available
         otherPlayers.indices.contains(0) ? otherPlayers[0] : nil
     }
 
     private var opponent2: Player? {
+        // Returns the second opponent if available
         otherPlayers.indices.contains(1) ? otherPlayers[1] : nil
     }
 
     private var isMyTurn: Bool {
+        // Checks if it's the local player's turn
         localPlayer?.id == matchManager.currentPlayerId
     }
 
     var body: some View {
         ZStack {
-            // background amel
+            // Book animation overlay (on top)
+            if showBookAnimation, let rank = bookRankToShow {
+                ZStack {
+                    ConfettiView(colors: [.white, .black])
+                    BookCardView(rank: rank)
+                }
+                .transition(.opacity.combined(with: .scale))
+                .zIndex(100)
+            }
+
+            // Background image for game view
             Image("gameviewbackground")
                 .resizable()
                 .scaledToFill()
@@ -54,48 +81,133 @@ struct GameView: View {
 
             VStack {
                 HStack(alignment: .top) {
+
                     playerSideView(for: opponent1)
-                    Spacer()
+
+                    VStack {
+                        Spacer()
+
+                        ZStack {
+                            ForEach(
+                                0..<min(matchManager.cardsRemainingInDeck, 5),
+                                id: \.self
+                            ) { i in
+                                CardBackView()
+                                    .frame(width: 80, height: 110)
+                                    .rotationEffect(
+                                        .degrees(
+                                            showDeckAnimation
+                                                ? Double(i) * 2 - 4 : 20
+                                        )
+                                    )
+                                    .offset(
+                                        y: showDeckAnimation
+                                            ? CGFloat(i) * -4 : 300
+                                    )
+                                    .scaleEffect(
+                                        showDeckAnimation
+                                            ? (1 - CGFloat(i) * 0.03) : 0.1
+                                    )
+                                    .zIndex(Double(i))
+                                    .animation(
+                                        .easeOut(duration: 0.6).delay(
+                                            Double(i) * 0.1
+                                        ),
+                                        value: showDeckAnimation
+                                    )
+                            }
+                        }
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        let frame = geo.frame(
+                                            in: .named("deckSpace")
+                                        )
+                                        deckPosition = CGPoint(
+                                            x: frame.midX,
+                                            y: frame.midY
+                                        )
+                                    }
+                            }
+                        )
+                        .overlay(alignment: .bottom) {
+                            Text("\(matchManager.cardsRemainingInDeck)")
+                                .font(.caption.bold()).foregroundColor(.white)
+                                .padding(4).background(Color.black.opacity(0.5))
+                                .clipShape(Capsule()).offset(y: 15)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+
                     playerSideView(for: opponent2)
                 }
 
-                VStack {
-                    Spacer()
-                    ZStack {
-                        ForEach(0..<min(matchManager.cardsRemainingInDeck, 5), id: \.self) { i in
-                            CardBackView()
-                                .frame(width: 80, height: 110)
-                                .offset(y: CGFloat(i) * -2)
-                                .zIndex(Double(i))
+                VStack(spacing: 5) {
+                    if matchManager.gameLog.isEmpty {
+                        Text("Game has started!").font(.headline).bold()
+                    } else {
+                        ForEach(
+                            Array(matchManager.gameLog.suffix(2)),
+                            id: \.self
+                        ) { logMessage in
+                            Text(logMessage)
+                                .font(.headline)
+                                .bold(
+                                    logMessage
+                                        == matchManager.gameLog.last
+                                )
+                                .opacity(
+                                    logMessage
+                                        == matchManager.gameLog.last
+                                        ? 1.0 : 0.5
+                                )
                         }
                     }
-                    .overlay(alignment: .bottom) {
-                        Text("\(matchManager.cardsRemainingInDeck)")
-                            .font(.caption.bold())
-                            .foregroundColor(.white)
-                            .padding(4)
-                            .background(Color.black.opacity(0.5))
-                            .clipShape(Capsule())
-                            .offset(y: 15)
-                    }
-
-                    Text(matchManager.gameLog.last ?? "Game has started!")
-                        .font(.headline)
-                        .bold()
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .padding(.top, 10)
-
-                    Spacer()
                 }
-                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center).padding().frame(
+                    minHeight: 80
+                ).padding(.top, 12)
+                .padding(.bottom, 20)
 
                 Spacer()
 
-                localPlayerView()
+                localPlayerView()  // Shows local player's hand and controls
             }
             .padding()
+            .onAppear {
+                isDealingCards = true
+                prepareHaptics()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    withAnimation(.easeOut(duration: 0.6)) {
+                        showDeckAnimation = true
+                    }
+                }
+            }
+            .onChange(of: matchManager.lastCompletedBook, initial: false) {
+                old,
+                new in
+                guard let book = new, book.playerId == localPlayer?.id else {
+                    return
+                }
+                playBookHaptic()
+                bookRankToShow = book.rank
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showBookAnimation = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation {
+                        showBookAnimation = false
+                    }
+                }
+            }
+            .onChange(of: matchManager.currentPlayerId) { oldValue, newValue in
+                if newValue == localPlayer?.id {
+                    playTurnHaptic()
+                }
+            }
         }
+        .coordinateSpace(name: "deckSpace")
     }
 
     @ViewBuilder
@@ -103,43 +215,77 @@ struct GameView: View {
         if let player = player {
             VStack(spacing: 20) {
                 OpponentView(
-                    player: player,
+                    matchManager: matchManager,
+                    playerId: player.id,
                     isCurrentTurn: matchManager.currentPlayerId == player.id
                 )
 
-                ZStack {
-                    ForEach(0..<min(player.hand.count, 7), id: \.self) {
-                        index in
-                        CardBackView()
-                            .frame(width: 60, height: 85)
-                            .offset(y: CGFloat(index) * 15)
+                GeometryReader { geo in
+                    HStack {
+                        Spacer()
+                        ZStack {
+                            ForEach(0..<min(player.hand.count, 12), id: \.self)
+                            {
+                                index in
+                                CardBackView()
+                                    .frame(width: 60, height: 85)
+                                    .scaleEffect(isDealingCards ? 1 : 0.1)
+                                    .opacity(isDealingCards ? 1 : 0)
+                                    .offset(
+                                        x: isDealingCards
+                                            ? 0
+                                            : UIScreen.main.bounds.midX
+                                                - geo.frame(in: .global).midX,
+                                        y: isDealingCards
+                                            ? CGFloat(index) * 15
+                                            : UIScreen.main.bounds.midY
+                                                - geo.frame(in: .global).midY
+                                    )
+                                    .animation(
+                                        .easeOut(duration: 0.3).delay(
+                                            Double(index) * 0.2
+                                        ),
+                                        value: isDealingCards
+                                    )
+                            }
+                        }
+                        .frame(width: 70)
+                        Spacer()
                     }
                 }
+                .frame(height: 160)
+
                 if isMyTurn,
-                   let selectedCardIndex = selectedCardIndex,
-                   let selectedCard = localPlayer?.hand.sorted(by: { $0.rank < $1.rank })[safe: selectedCardIndex],
-                   player.id != localPlayer?.id {
+                    let selectedRank = selectedRank,
+                    player.id != localPlayer?.id
+                {
                     Button("Ask!") {
+                        // Sends the takeTurn action with selected card rank and opponent ID
                         matchManager.takeTurn(
-                            askingPlayerId: matchManager.localPlayer.gamePlayerID,
+                            askingPlayerId: matchManager.localPlayer
+                                .gamePlayerID,
                             askedPlayerId: player.id,
-                            requestedRank: selectedCard.rank
+                            requestedRank: selectedRank
                         )
-                        self.selectedCardIndex = nil
+                        self.selectedRank = nil
                     }
-                    .padding(.top, 8)
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.white)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black, lineWidth: 1))
+                    .background(Color.newRed)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10).stroke(
+                            Color.black,
+                            lineWidth: 1
+                        )
+                    )
                     .clipShape(Capsule())
                 }
             }
-            .frame(width: 100)
+            .frame(width: 100)  // Fixed width for opponent views
         } else {
-            Spacer().frame(width: 100)
+            Spacer().frame(width: 100)  // Placeholder space if no opponent
         }
     }
 
@@ -147,26 +293,72 @@ struct GameView: View {
     private func localPlayerView() -> some View {
         VStack(spacing: 10) {
             if let hand = localPlayer?.hand.sorted(by: { $0.rank < $1.rank }) {
-                ZStack {
-                    ForEach(Array(hand.enumerated()), id: \.element.id) {
-                        index,
-                        card in
-                        let spacing: CGFloat = hand.count > 7 ? 25 : 40
-                        CardView(card: card)
-                            .frame(height: 140)
-                            .offset(
-                                x: CGFloat(index - hand.count / 2) * spacing,
-                                y: selectedCardIndex == index ? -30 : 0
+                GeometryReader { geometry in
+                    let minSpacing: CGFloat = 18
+                    let maxSpacing: CGFloat = 40
+                    let spacing = max(
+                        minSpacing,
+                        min(maxSpacing, 280 / CGFloat(hand.count))
+                    )
+                    let totalWidth = spacing * CGFloat(hand.count - 1)
+                    ZStack {
+                        // Displays local player's hand with cards spaced horizontally and selectable
+                        ForEach(Array(hand.enumerated()), id: \.element.id) {
+                            index,
+                            card in
+                            let spacing = max(
+                                18,
+                                min(40, 280 / CGFloat(hand.count))
                             )
-                            .animation(.easeInOut(duration: 0.3), value: hand.count)
-                            .onTapGesture {
-                                withAnimation(.spring()) {
-                                    selectedCardIndex =
-                                        (selectedCardIndex == index)
-                                        ? nil : index
+                            let totalWidth = spacing * CGFloat(hand.count - 1)
+                            let isDealt = dealtCardIDs.contains(card.id)
+
+                            CardView(card: card)
+                                .frame(height: 140)
+                                .scaleEffect(isDealt ? 1 : 0.1)
+                                .opacity(isDealt ? 1 : 0)
+                                .animation(
+                                    .easeOut(duration: 0.3).delay(
+                                        Double(index) * 0.05
+                                    ),
+                                    value: dealtCardIDs
+                                )
+                                .onAppear {
+                                    if isDealingCards {
+                                        DispatchQueue.main.asyncAfter(
+                                            deadline: .now() + Double(index)
+                                                * 0.05
+                                        ) {
+                                            dealtCardIDs.insert(card.id)
+                                        }
+                                    }
                                 }
-                            }
-                    }
+                                .animation(
+                                    .easeInOut(duration: 0.3),
+                                    value: hand.count
+                                )
+                                .onTapGesture {
+                                    guard isMyTurn else { return }
+                                    playCardTapHaptic()
+                                    withAnimation(.spring()) {
+                                        selectedRank =
+                                            (selectedRank == card.rank)
+                                            ? nil : card.rank
+                                    }
+                                }
+                                .offset(
+                                    x: isDealt
+                                        ? CGFloat(index) * spacing - totalWidth
+                                            / 2
+                                        : deckPosition.x - geometry.size.width
+                                            / 2,
+                                    y: isDealt
+                                        ? selectedRank == card.rank ? -30 : 0
+                                        : deckPosition.y
+                                            - geometry.frame(in: .global).minY
+                                )
+                        }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(height: 160)
             }
@@ -178,22 +370,37 @@ struct GameView: View {
                     VStack {
                         Text("Your Books")
                             .font(.caption2)
+                            .foregroundColor(.black)
                         Text("★ \(localPlayer?.books ?? 0)")
                             .font(.headline).bold()
+                            .foregroundColor(.black)
                     }
                 }
 
-                Image(systemName: "person.fill")
-                    .font(.title)
-                    .frame(width: 60, height: 60)
-                    .background(Color.orange.opacity(0.8))
-                    .clipShape(Circle())
+                if let gkPlayer = matchManager.getGKPlayer(
+                    by: localPlayer?.id ?? ""
+                ) {
+                    GameCenterAvatarView(
+                        player: gkPlayer,
+                        size: CGSize(width: 60, height: 60)
+                    )
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.title)
+                        .frame(width: 60, height: 60)
+                        .background(Color.newRed)
+                        .clipShape(Circle())
+                }
 
                 if isMyTurn {
-                    Text("Tap a card, then choose a player to ask.")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
+                    Text("Your Turn")
+                        .font(.headline.bold())
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.black)
+                        .clipShape(Capsule())
                 } else {
+                    // Waiting message when it's not local player's turn
                     Text("Waiting...")
                         .font(.headline.bold())
                         .foregroundColor(.white.opacity(0.7))
@@ -208,15 +415,19 @@ struct GameView: View {
                 Text("Completed Books")
                     .font(.title2).bold()
 
-                let bookRanks = matchManager.booksForPlayer(id: localPlayer?.id ?? "")
+                let bookRanks = matchManager.booksForPlayer(
+                    id: localPlayer?.id ?? ""
+                )
                 if bookRanks.isEmpty {
+                    // Message when no books completed yet
                     Text("You haven't completed any books yet.")
                         .foregroundColor(.secondary)
                 } else {
+                    // List all completed book ranks
                     ForEach(bookRanks, id: \.self) { rank in
-                        Text("• \(rank.rawValue)")
-                            .font(.headline)
+                        BookCardView(rank: rank)
                     }
+
                 }
 
                 Spacer()
@@ -224,6 +435,114 @@ struct GameView: View {
             .padding()
         }
     }
+
+    func prepareHaptics() {
+        do {
+            self.hapticEngine = try CHHapticEngine()
+            try hapticEngine?.start()
+        } catch {
+            print(
+                "Haptic engine failed to start: \(error.localizedDescription)"
+            )
+        }
+    }
+
+    func playTurnHaptic() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            return
+        }
+
+        var events = [CHHapticEvent]()
+
+        let sharpness = CHHapticEventParameter(
+            parameterID: .hapticSharpness,
+            value: 1.0
+        )
+        let intensity = CHHapticEventParameter(
+            parameterID: .hapticIntensity,
+            value: 1.0
+        )
+
+        let event = CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [intensity, sharpness],
+            relativeTime: 0
+        )
+
+        events.append(event)
+
+        do {
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try hapticEngine?.makePlayer(with: pattern)
+            try player?.start(atTime: 0)
+        } catch {
+            print("Failed to play haptic: \(error.localizedDescription)")
+        }
+    }
+
+    func playBookHaptic() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            return
+        }
+
+        var events = [CHHapticEvent]()
+
+        let continuousIntensity = CHHapticEventParameter(
+            parameterID: .hapticIntensity,
+            value: 1.0
+        )
+        let continuousSharpness = CHHapticEventParameter(
+            parameterID: .hapticSharpness,
+            value: 0.7
+        )
+
+        let continuousEvent = CHHapticEvent(
+            eventType: .hapticContinuous,
+            parameters: [continuousIntensity, continuousSharpness],
+            relativeTime: 0,
+            duration: 0.5
+        )
+
+        events.append(continuousEvent)
+
+        do {
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try hapticEngine?.makePlayer(with: pattern)
+            try player?.start(atTime: 0)
+        } catch {
+            print("Failed to play book haptic: \(error.localizedDescription)")
+        }
+    }
+
+    func playCardTapHaptic() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            return
+        }
+
+        let intensity = CHHapticEventParameter(
+            parameterID: .hapticIntensity,
+            value: 0.5
+        )
+        let sharpness = CHHapticEventParameter(
+            parameterID: .hapticSharpness,
+            value: 0.6
+        )
+
+        let tap = CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [intensity, sharpness],
+            relativeTime: 0
+        )
+
+        do {
+            let pattern = try CHHapticPattern(events: [tap], parameters: [])
+            let player = try hapticEngine?.makePlayer(with: pattern)
+            try player?.start(atTime: 0)
+        } catch {
+            print("Failed to play tap haptic: \(error.localizedDescription)")
+        }
+    }
+
 }
 
 #Preview {
@@ -242,7 +561,7 @@ struct GameView: View {
                 Card(rank: .ace, suit: .clubs),
                 Card(rank: .five, suit: .hearts),
             ],
-            books: 1
+            books: 0
         )
 
         let opponentHand1 = (0..<5).map { _ in Card(rank: .queen, suit: .clubs)

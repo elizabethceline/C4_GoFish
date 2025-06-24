@@ -11,12 +11,12 @@ struct MenuView: View {
     @ObservedObject var matchManager: MatchManager
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image("logo")
+        VStack(spacing: 10) {
+            Image("logosketchy")
             .resizable()
             .scaledToFill()
-            .frame(width: 300, height: 150)
-            .padding(.bottom, 20)
+            .frame(width: 200, height: 250)
+            .padding(.bottom, 130)
 
             Button {
                 matchManager.startMatchmaking()
@@ -24,16 +24,31 @@ struct MenuView: View {
                 Image("playbutton")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 300, height: 100)
+                        .frame(width: 250, height: 80)
                         .opacity(matchManager.authenticationState != .authenticated || matchManager.gameState != .menu ? 0.5 : 1.0)
                         .animation(.easeInOut, value: matchManager.authenticationState != .authenticated || matchManager.gameState != .menu)
                 }
             .disabled(matchManager.authenticationState != .authenticated || matchManager.gameState != .menu)
             
+            Button {
+                matchManager.startAIGame()
+            } label: {
+                Image("playwithAIbutton")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 250, height: 80)
+                        .opacity(matchManager.authenticationState != .authenticated || matchManager.gameState != .menu ? 0.5 : 1.0)
+                        .animation(.easeInOut, value: matchManager.authenticationState != .authenticated || matchManager.gameState != .menu)
+            }
+            .disabled(matchManager.gameState != .menu)
+            .opacity(matchManager.gameState != .menu ? 0.5 : 1.0)
+            .animation(.easeInOut, value: matchManager.gameState != .menu)
+            
             if matchManager.authenticationState != .authenticated {
                 Text(matchManager.authenticationState.rawValue)
                     .font(.headline)
-                    .foregroundColor(.red)
+                    .foregroundColor(.black)
+                    .padding(.top, 20)
                     .padding(.horizontal)
                     .multilineTextAlignment(.center)
             }

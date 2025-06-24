@@ -8,6 +8,11 @@
 import Foundation
 import GameKit
 
+struct CompletedBook: Equatable {
+    let playerId: String
+    let rank: Card.Rank
+}
+
 class MatchManager: NSObject, ObservableObject {
     @Published var authenticationState = PlayerAuthState.authenticating
     @Published var match: GKMatch?
@@ -20,6 +25,8 @@ class MatchManager: NSObject, ObservableObject {
     @Published var currentPlayerId: String?
     @Published var cardsRemainingInDeck: Int = 52
     @Published var winners: [Player] = []
+    @Published var isVsAI: Bool = false
+    @Published var lastCompletedBook: CompletedBook?
 
     var deck = Deck()
     // Store the original dealt deck for memory tracking
@@ -86,7 +93,7 @@ class MatchManager: NSObject, ObservableObject {
         let hostID = allPlayerIDs.sorted().first
 
         if localPlayer.gamePlayerID != hostID {
-            self.deck = Deck(from: []) // Empty deck for clients
+            self.deck = Deck(from: [])  // Empty deck for clients
             print("I am a client. Waiting for host to deal.")
             return
         }
@@ -115,7 +122,28 @@ class MatchManager: NSObject, ObservableObject {
                     hand: playerHand, books: 0))
         }
 
+        if isVsAI {
+            let aiPlayer1 = Player(
+                id: "AI-1",
+                displayName: "SketchyBot 🤖 1",
+                hand: deck.deal(count: initialHandSize),
+                books: 0
+            )
+            let aiPlayer2 = Player(
+                id: "AI-2",
+                displayName: "SketchyBot 🤖 2",
+                hand: deck.deal(count: initialHandSize),
+                books: 0
+            )
+            allPlayersInfo.append(contentsOf: [aiPlayer1, aiPlayer2])
+        }
+
         self.players = allPlayersInfo
+        if isVsAI, let currentId = self.players.first?.id, currentId.starts(with: "AI") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.runAITurn()
+            }
+        }
         // Remember all dealt cards for memory tracking
         self.dealtCards = allPlayersInfo.flatMap { $0.hand }
         self.usedCards = self.dealtCards
@@ -140,9 +168,6 @@ class MatchManager: NSObject, ObservableObject {
             self.cardsRemainingInDeck = remainingCount
             self.gameState = .inGame
             self.currentPlayerId = self.players.first?.id
-            if !self.gameLog.contains(where: { $0.contains("made a book") }) {
-                self.gameLog.append("Cards have been dealt.")
-            }
         }
     }
     // Return all books (completed sets of 4) collected by a specific player
@@ -170,8 +195,20 @@ class MatchManager: NSObject, ObservableObject {
                     "🎉 \(playerName) made a book of \(rank.rawValue)!"
                 gameLog.append(logMessage)
                 print(logMessage)
+                lastCompletedBook = CompletedBook(playerId: forPlayerId, rank: rank)
             }
         }
+        
+        let gameData = GameData(
+            players: self.players,
+            cardsRemainingInDeck: self.deck.cardsRemaining,
+            isGameOver: false,
+            winners: nil,
+            currentPlayerId: self.currentPlayerId,
+            gameLog: self.gameLog,
+            shuffledDeck: deck.getCards()
+        )
+        sendData(gameData)
     }
 
     @discardableResult
@@ -190,7 +227,9 @@ class MatchManager: NSObject, ObservableObject {
     }
 
     // Handle a player's turn: asking another player for a rank
-    func takeTurn(askingPlayerId: String, askedPlayerId: String, requestedRank: Card.Rank) {
+    func takeTurn(
+        askingPlayerId: String, askedPlayerId: String, requestedRank: Card.Rank
+    ) {
         guard gameState == .inGame else {
             print("Game is not active.")
             return
@@ -201,8 +240,14 @@ class MatchManager: NSObject, ObservableObject {
             return
         }
 
-        guard let askerIndex = players.firstIndex(where: { $0.id == askingPlayerId }),
-              let askedIndex = players.firstIndex(where: { $0.id == askedPlayerId }) else { return }
+        guard
+            let askerIndex = players.firstIndex(where: {
+                $0.id == askingPlayerId
+            }),
+            let askedIndex = players.firstIndex(where: {
+                $0.id == askedPlayerId
+            })
+        else { return }
 
         let askedPlayer = players[askedIndex]
         let matchingCards = askedPlayer.hand.filter { $0.rank == requestedRank }
@@ -212,26 +257,41 @@ class MatchManager: NSObject, ObservableObject {
             players[askerIndex].hand.append(contentsOf: matchingCards)
             players[askedIndex].hand.removeAll { $0.rank == requestedRank }
 
-            let message = "\(players[askerIndex].displayName) got \(matchingCards.count) \(requestedRank.rawValue)(s) from \(askedPlayer.displayName)."
+            let message =
+                "\(players[askerIndex].displayName) got \(matchingCards.count) \(requestedRank.rawValue)(s) from \(askedPlayer.displayName)."
             gameLog.append(message)
             print(message)
 
             // Check for books
             checkForBooks(forPlayerId: askingPlayerId)
+
+            // AI gets another turn if it succeeded
+            if isVsAI, askingPlayerId.starts(with: "AI") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.runAITurn()
+                }
+            }
         } else {
             // Go Fish
             if let drawnCard = deck.deal(count: 1).first {
                 players[askerIndex].hand.append(drawnCard)
                 usedCards.append(drawnCard)
-                gameLog.append("\(players[askerIndex].displayName) goes fish and draws a card.")
-                print("\(players[askerIndex].displayName) drew a card.")
+                gameLog.append(
+                    "\(players[askerIndex].displayName) asked for \(requestedRank.rawValue) from \(askedPlayer.displayName) but got nothing. Sketchy!"
+                )
                 cardsRemainingInDeck = deck.cardsRemaining
-
-                // Check for book from drawn card
-                checkForBooks(forPlayerId: askingPlayerId)
+                
+                if(drawnCard.rank == requestedRank) {
+                    gameLog.append(
+                        "\(players[askerIndex].displayName) got a \(drawnCard.rank.rawValue) from the deck!"
+                    )
+                    
+                    // Check for book from drawn card
+                    checkForBooks(forPlayerId: askingPlayerId)
+                } else {
+                    advanceTurn()
+                }
             }
-
-            advanceTurn()
         }
 
         // Sync data with other players
@@ -243,7 +303,7 @@ class MatchManager: NSObject, ObservableObject {
             currentPlayerId: self.currentPlayerId,
             gameLog: self.gameLog,
             shuffledDeck: deck.getCards()
-            
+
         )
         sendData(gameData)
 
@@ -253,7 +313,8 @@ class MatchManager: NSObject, ObservableObject {
     // Rotate to the next player's turn
     func advanceTurn() {
         guard let currentId = currentPlayerId,
-              let index = players.firstIndex(where: { $0.id == currentId }) else { return }
+            let index = players.firstIndex(where: { $0.id == currentId })
+        else { return }
         let nextIndex = (index + 1) % players.count
         currentPlayerId = players[nextIndex].id
         gameLog.append("It's now \(players[nextIndex].displayName)'s turn.")
@@ -267,6 +328,11 @@ class MatchManager: NSObject, ObservableObject {
             shuffledDeck: deck.getCards()
         )
         sendData(gameData)
+        if isVsAI, let currentId = currentPlayerId, currentId.starts(with: "AI") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.runAITurn()
+            }
+        }
     }
 
     func determineWinner() {
@@ -314,6 +380,13 @@ class MatchManager: NSObject, ObservableObject {
             self.gameLog = ["It's Sketchy Time!"]
         }
     }
+    
+    func getGKPlayer(by id: String) -> GKPlayer? {
+        if id == localPlayer.gamePlayerID {
+            return localPlayer
+        }
+        return otherPlayers.first(where: { $0.gamePlayerID == id })
+    }
 
     func sendData(_ data: GameData) {
         guard let match = match else { return }
@@ -324,5 +397,31 @@ class MatchManager: NSObject, ObservableObject {
             print(
                 "Error encoding or sending data: \(error.localizedDescription)")
         }
+    }
+    
+    func runAITurn() {
+        guard let aiPlayer = players.first(where: { $0.id == currentPlayerId && $0.id.starts(with: "AI") }) else { return }
+        guard let rank = aiPlayer.hand.randomElement()?.rank else {
+            advanceTurn()
+            return
+        }
+        let targets = players.filter { $0.id != aiPlayer.id }
+        guard let target = targets.randomElement() else {
+            advanceTurn()
+            return
+        }
+
+        takeTurn(
+            askingPlayerId: aiPlayer.id,
+            askedPlayerId: target.id,
+            requestedRank: rank
+        )
+    }
+    
+    // Start a game against AI
+    func startAIGame() {
+        self.isVsAI = true
+        self.gameState = .inGame
+        self.dealInitialCards()
     }
 }
