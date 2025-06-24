@@ -111,7 +111,7 @@ class MatchManager: NSObject, ObservableObject {
         deck.shuffle()
 
         var allPlayersInfo = [Player]()
-        let initialHandSize = 5
+        let initialHandSize = 7
 
         let allPlayers = [localPlayer] + otherPlayers
         for p in allPlayers {

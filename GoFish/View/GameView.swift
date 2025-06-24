@@ -185,7 +185,7 @@ struct GameView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     withAnimation(.easeOut(duration: 0.6)) {
                         showDeckAnimation = true
-                        
+
                         SoundManager.shared
                             .playCardDealSound()
                     }

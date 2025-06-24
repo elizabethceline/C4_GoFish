@@ -95,6 +95,9 @@ struct GameOverView: View {
         .animation(
             .spring(response: 0.4, dampingFraction: 0.6),
             value: matchManager.players)
+        .onAppear {
+            SoundManager.shared.playGameOverSound()
+        }
     }
 }
 

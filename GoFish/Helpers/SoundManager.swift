@@ -17,23 +17,27 @@ class SoundManager {
         playSound(named: "card_deal.wav", withExtension: "wav")
     }
 
+    func playGameOverSound() {
+        playSound(named: "game_over.wav", withExtension: "wav")
+    }
+
     private func playSound(named name: String, withExtension ext: String) {
-        guard let path = Bundle.main.path(forResource: name, ofType:nil) else {
+        guard let path = Bundle.main.path(forResource: name, ofType: nil) else {
             print("Sound file \(name).\(ext) not found.")
             return
         }
-        
+
         let url = URL(fileURLWithPath: path)
 
         do {
             player = try AVAudioPlayer(contentsOf: url)
-//            player?.prepareToPlay()
+            //            player?.prepareToPlay()
             player?.play()
         } catch {
             print("Failed to play sound: \(error.localizedDescription)")
         }
     }
-    
+
     func stopSound() {
         player?.stop()
         player = nil
