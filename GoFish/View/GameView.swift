@@ -198,6 +198,7 @@ struct GameView: View {
                     return
                 }
                 playBookHaptic()
+                SoundManager.shared.playBookSound()
                 bookRankToShow = book.rank
                 withAnimation(.easeOut(duration: 0.4)) {
                     showBookAnimation = true

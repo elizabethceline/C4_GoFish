@@ -20,6 +20,10 @@ class SoundManager {
     func playGameOverSound() {
         playSound(named: "game_over.wav", withExtension: "wav")
     }
+    
+    func playBookSound() {
+        playSound(named: "book.wav", withExtension: "wav")
+    }
 
     private func playSound(named name: String, withExtension ext: String) {
         guard let path = Bundle.main.path(forResource: name, ofType: nil) else {
