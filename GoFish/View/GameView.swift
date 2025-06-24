@@ -5,6 +5,7 @@
 //  Created by Elizabeth Celine Liong on 11/06/25.
 //
 
+import AVFoundation
 import CoreHaptics
 import GameKit
 import SwiftUI
@@ -32,7 +33,8 @@ struct GameView: View {
     @State private var showBookAnimation = false
     @State private var bookRankToShow: Card.Rank?
 
-    @State private var hapticEngine: CHHapticEngine?
+    // audio
+    @State private var cardDealPlayer: AVAudioPlayer?
 
     private var localPlayer: Player? {
         // Finds the local player from the match manager's players list
@@ -177,10 +179,12 @@ struct GameView: View {
             .padding()
             .onAppear {
                 isDealingCards = true
-                prepareHaptics()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     withAnimation(.easeOut(duration: 0.6)) {
                         showDeckAnimation = true
+
+                        SoundManager.shared
+                            .playCardDealSound()
                     }
                 }
             }
@@ -190,7 +194,8 @@ struct GameView: View {
                 guard let book = new, book.playerId == localPlayer?.id else {
                     return
                 }
-                playBookHaptic()
+                HapticManager.shared.playBookHaptic()
+                SoundManager.shared.playBookSound()
                 bookRankToShow = book.rank
                 withAnimation(.easeOut(duration: 0.4)) {
                     showBookAnimation = true
@@ -203,7 +208,7 @@ struct GameView: View {
             }
             .onChange(of: matchManager.currentPlayerId) { oldValue, newValue in
                 if newValue == localPlayer?.id {
-                    playTurnHaptic()
+                    HapticManager.shared.playTurnHaptic()
                 }
             }
         }
@@ -339,7 +344,7 @@ struct GameView: View {
                                 )
                                 .onTapGesture {
                                     guard isMyTurn else { return }
-                                    playCardTapHaptic()
+                                    HapticManager.shared.playCardTapHaptic()
                                     withAnimation(.spring()) {
                                         selectedRank =
                                             (selectedRank == card.rank)
@@ -435,114 +440,6 @@ struct GameView: View {
             .padding()
         }
     }
-
-    func prepareHaptics() {
-        do {
-            self.hapticEngine = try CHHapticEngine()
-            try hapticEngine?.start()
-        } catch {
-            print(
-                "Haptic engine failed to start: \(error.localizedDescription)"
-            )
-        }
-    }
-
-    func playTurnHaptic() {
-        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
-            return
-        }
-
-        var events = [CHHapticEvent]()
-
-        let sharpness = CHHapticEventParameter(
-            parameterID: .hapticSharpness,
-            value: 1.0
-        )
-        let intensity = CHHapticEventParameter(
-            parameterID: .hapticIntensity,
-            value: 1.0
-        )
-
-        let event = CHHapticEvent(
-            eventType: .hapticTransient,
-            parameters: [intensity, sharpness],
-            relativeTime: 0
-        )
-
-        events.append(event)
-
-        do {
-            let pattern = try CHHapticPattern(events: events, parameters: [])
-            let player = try hapticEngine?.makePlayer(with: pattern)
-            try player?.start(atTime: 0)
-        } catch {
-            print("Failed to play haptic: \(error.localizedDescription)")
-        }
-    }
-
-    func playBookHaptic() {
-        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
-            return
-        }
-
-        var events = [CHHapticEvent]()
-
-        let continuousIntensity = CHHapticEventParameter(
-            parameterID: .hapticIntensity,
-            value: 1.0
-        )
-        let continuousSharpness = CHHapticEventParameter(
-            parameterID: .hapticSharpness,
-            value: 0.7
-        )
-
-        let continuousEvent = CHHapticEvent(
-            eventType: .hapticContinuous,
-            parameters: [continuousIntensity, continuousSharpness],
-            relativeTime: 0,
-            duration: 0.5
-        )
-
-        events.append(continuousEvent)
-
-        do {
-            let pattern = try CHHapticPattern(events: events, parameters: [])
-            let player = try hapticEngine?.makePlayer(with: pattern)
-            try player?.start(atTime: 0)
-        } catch {
-            print("Failed to play book haptic: \(error.localizedDescription)")
-        }
-    }
-
-    func playCardTapHaptic() {
-        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
-            return
-        }
-
-        let intensity = CHHapticEventParameter(
-            parameterID: .hapticIntensity,
-            value: 0.5
-        )
-        let sharpness = CHHapticEventParameter(
-            parameterID: .hapticSharpness,
-            value: 0.6
-        )
-
-        let tap = CHHapticEvent(
-            eventType: .hapticTransient,
-            parameters: [intensity, sharpness],
-            relativeTime: 0
-        )
-
-        do {
-            let pattern = try CHHapticPattern(events: [tap], parameters: [])
-            let player = try hapticEngine?.makePlayer(with: pattern)
-            try player?.start(atTime: 0)
-        } catch {
-            print("Failed to play tap haptic: \(error.localizedDescription)")
-        }
-    }
-
 }
 
 #Preview {

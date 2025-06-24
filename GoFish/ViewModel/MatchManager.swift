@@ -111,7 +111,7 @@ class MatchManager: NSObject, ObservableObject {
         deck.shuffle()
 
         var allPlayersInfo = [Player]()
-        let initialHandSize = 5
+        let initialHandSize = 7
 
         let allPlayers = [localPlayer] + otherPlayers
         for p in allPlayers {
@@ -281,11 +281,12 @@ class MatchManager: NSObject, ObservableObject {
                 )
                 cardsRemainingInDeck = deck.cardsRemaining
                 
+                checkForBooks(forPlayerId: askingPlayerId)
+                
                 if drawnCard.rank == requestedRank {
                     gameLog.append(
                         "\(players[askerIndex].displayName) got a \(drawnCard.rank.rawValue) from the deck!"
                     )
-                    checkForBooks(forPlayerId: askingPlayerId)
 
                     // If it's an AI, continue its turn
                     if isVsAI, askingPlayerId.starts(with: "AI") {
