@@ -319,7 +319,7 @@ struct GameView: View {
                                 .opacity(isDealt ? 1 : 0)
                                 .animation(
                                     .easeOut(duration: 0.3).delay(
-                                        Double(index) * 0.15
+                                        Double(index) * 0.05
                                     ),
                                     value: dealtCardIDs
                                 )
@@ -327,7 +327,7 @@ struct GameView: View {
                                     if isDealingCards {
                                         DispatchQueue.main.asyncAfter(
                                             deadline: .now() + Double(index)
-                                                * 0.15
+                                                * 0.05
                                         ) {
                                             dealtCardIDs.insert(card.id)
                                         }
