@@ -22,6 +22,7 @@ struct ContentView: View {
         }
         .onAppear {
             matchManager.authenticateUser()
+            SoundManager.shared.playBackgroundMusic()
         }
     }
 }
