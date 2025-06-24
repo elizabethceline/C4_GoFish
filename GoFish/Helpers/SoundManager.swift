@@ -58,7 +58,7 @@ class SoundManager {
         do {
             player2 = try AVAudioPlayer(contentsOf: url)
             player2?.play()
-            player2?.volume = 0.5
+            player2?.volume = 0.2
             player2?.numberOfLoops = -1
         } catch {
             print("Failed to play sound: \(error.localizedDescription)")
