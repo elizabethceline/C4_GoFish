@@ -11,12 +11,12 @@ struct MenuView: View {
     @ObservedObject var matchManager: MatchManager
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
             Image("logosketchy")
             .resizable()
             .scaledToFill()
             .frame(width: 200, height: 250)
-            .padding(.bottom, 20)
+            .padding(.bottom, 130)
 
             Button {
                 matchManager.startMatchmaking()
@@ -24,8 +24,7 @@ struct MenuView: View {
                 Image("playbutton")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 250, height: 100)
-                        .padding()
+                        .frame(width: 250, height: 80)
                         .opacity(matchManager.authenticationState != .authenticated || matchManager.gameState != .menu ? 0.5 : 1.0)
                         .animation(.easeInOut, value: matchManager.authenticationState != .authenticated || matchManager.gameState != .menu)
                 }
@@ -34,13 +33,12 @@ struct MenuView: View {
             Button {
                 matchManager.startAIGame()
             } label: {
-                Text("Play Against AI")
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-                    .frame(width: 250, height: 60)
-                    .background(Color.blue)
-                    .cornerRadius(12)
-                    .padding(.top, 10)
+                Image("playwithAIbutton")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 250, height: 80)
+                        .opacity(matchManager.authenticationState != .authenticated || matchManager.gameState != .menu ? 0.5 : 1.0)
+                        .animation(.easeInOut, value: matchManager.authenticationState != .authenticated || matchManager.gameState != .menu)
             }
             .disabled(matchManager.gameState != .menu)
             .opacity(matchManager.gameState != .menu ? 0.5 : 1.0)
@@ -49,7 +47,8 @@ struct MenuView: View {
             if matchManager.authenticationState != .authenticated {
                 Text(matchManager.authenticationState.rawValue)
                     .font(.headline)
-                    .foregroundColor(.red)
+                    .foregroundColor(.black)
+                    .padding(.top, 20)
                     .padding(.horizontal)
                     .multilineTextAlignment(.center)
             }
