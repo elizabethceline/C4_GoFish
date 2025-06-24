@@ -281,13 +281,13 @@ class MatchManager: NSObject, ObservableObject {
                 )
                 cardsRemainingInDeck = deck.cardsRemaining
                 
+                // Check for book from drawn card
+                checkForBooks(forPlayerId: askingPlayerId)
+                
                 if(drawnCard.rank == requestedRank) {
                     gameLog.append(
                         "\(players[askerIndex].displayName) got a \(drawnCard.rank.rawValue) from the deck!"
                     )
-                    
-                    // Check for book from drawn card
-                    checkForBooks(forPlayerId: askingPlayerId)
                 } else {
                     advanceTurn()
                 }
