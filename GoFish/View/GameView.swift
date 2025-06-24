@@ -416,28 +416,30 @@ struct GameView: View {
             }
         }
         .sheet(isPresented: $showBooksSheet) {
-            VStack(spacing: 20) {
-                Text("Completed Books")
-                    .font(.title2).bold()
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("Completed Books")
+                        .font(.title2).bold()
 
-                let bookRanks = matchManager.booksForPlayer(
-                    id: localPlayer?.id ?? ""
-                )
-                if bookRanks.isEmpty {
-                    // Message when no books completed yet
-                    Text("You haven't completed any books yet.")
-                        .foregroundColor(.secondary)
-                } else {
-                    // List all completed book ranks
-                    ForEach(bookRanks, id: \.self) { rank in
-                        BookCardView(rank: rank)
+                    let bookRanks = matchManager.booksForPlayer(
+                        id: localPlayer?.id ?? ""
+                    )
+                    if bookRanks.isEmpty {
+                        // Message when no books completed yet
+                        Text("You haven't completed any books yet.")
+                            .foregroundColor(.secondary)
+                    } else {
+                        // List all completed book ranks
+                        ForEach(bookRanks, id: \.self) { rank in
+                            BookCardView(rank: rank)
+                        }
+
                     }
 
+                    Spacer()
                 }
-
-                Spacer()
+                .padding()
             }
-            .padding()
         }
     }
 }
