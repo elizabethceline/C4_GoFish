@@ -5,6 +5,7 @@
 //  Created by Elizabeth Celine Liong on 11/06/25.
 //
 
+import AVFoundation
 import CoreHaptics
 import GameKit
 import SwiftUI
@@ -33,6 +34,9 @@ struct GameView: View {
     @State private var bookRankToShow: Card.Rank?
 
     @State private var hapticEngine: CHHapticEngine?
+
+    // audio
+    @State private var cardDealPlayer: AVAudioPlayer?
 
     private var localPlayer: Player? {
         // Finds the local player from the match manager's players list
@@ -330,6 +334,8 @@ struct GameView: View {
                                                 * 0.05
                                         ) {
                                             dealtCardIDs.insert(card.id)
+                                            SoundManager.shared
+                                                .playCardDealSound()
                                         }
                                     }
                                 }
@@ -540,6 +546,26 @@ struct GameView: View {
             try player?.start(atTime: 0)
         } catch {
             print("Failed to play tap haptic: \(error.localizedDescription)")
+        }
+    }
+
+    func playCardDealSound() {
+        guard
+            let url = Bundle.main.url(
+                forResource: "card_deal",
+                withExtension: "mp3"
+            )
+        else {
+            print("Sound file not found")
+            return
+        }
+
+        do {
+            cardDealPlayer = try AVAudioPlayer(contentsOf: url)
+            cardDealPlayer?.prepareToPlay()
+            cardDealPlayer?.play()
+        } catch {
+            print("Failed to play sound: \(error.localizedDescription)")
         }
     }
 
