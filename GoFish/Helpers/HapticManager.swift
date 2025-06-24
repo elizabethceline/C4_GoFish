@@ -27,7 +27,7 @@ class HapticManager {
     }
 
     func playTurnHaptic() {
-        playTransient(intensity: 1.0, sharpness: 1.0)
+        playContinuous(intensity: 0.8, sharpness: 0.7, duration: 0.2)
     }
 
     func playCardTapHaptic() {

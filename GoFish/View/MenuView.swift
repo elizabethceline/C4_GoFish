@@ -64,12 +64,6 @@ struct MenuView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    Image("menuviewbackground")
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
-            )
     }
 }
 
