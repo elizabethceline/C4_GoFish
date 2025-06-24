@@ -281,13 +281,18 @@ class MatchManager: NSObject, ObservableObject {
                 )
                 cardsRemainingInDeck = deck.cardsRemaining
                 
-                if(drawnCard.rank == requestedRank) {
+                if drawnCard.rank == requestedRank {
                     gameLog.append(
                         "\(players[askerIndex].displayName) got a \(drawnCard.rank.rawValue) from the deck!"
                     )
-                    
-                    // Check for book from drawn card
                     checkForBooks(forPlayerId: askingPlayerId)
+
+                    // If it's an AI, continue its turn
+                    if isVsAI, askingPlayerId.starts(with: "AI") {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            self.runAITurn()
+                        }
+                    }
                 } else {
                     advanceTurn()
                 }
